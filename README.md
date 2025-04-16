@@ -94,6 +94,57 @@ The app includes pages for:
 
 Authentication is handled through the ScaleUp API.
 
+## Release Process
+
+The project uses semantic versioning and provides scripts to automate the release process.
+
+### Using the Release Scripts
+
+#### For Unix/Linux/Mac Users:
+
+```bash
+# Using npm
+npm run release 0.2.0
+
+# Or directly using Node.js
+node scripts/release.js 0.2.0
+
+# Or using bash script
+bash scripts/release.sh 0.2.0
+```
+
+#### For Windows Users:
+
+```powershell
+# Using npm
+npm run release:win 0.2.0
+
+# Or directly using PowerShell
+.\scripts\release.ps1 0.2.0
+```
+
+### What the Release Script Does
+
+1. Creates a release branch (e.g., `release/v0.2.0`) from your current branch
+2. Updates the version in `package.json`
+3. Checks/updates the `CHANGELOG.md` if necessary
+4. Commits these changes
+5. Creates a version tag (e.g., `v0.2.0`)
+6. Merges the release branch to master
+7. Provides instructions for pushing to remote and creating a GitHub release
+
+### Manual Release Process
+
+If you prefer to release manually, follow these steps:
+
+1. Create a release branch: `git checkout -b release/v0.2.0`
+2. Update version in package.json: `npm version 0.2.0 --no-git-tag-version`
+3. Ensure CHANGELOG.md is updated
+4. Commit changes: `git commit -am "chore: prepare release v0.2.0"`
+5. Tag the release: `git tag -a v0.2.0 -m "Release v0.2.0"`
+6. Merge to master: `git checkout master && git merge --no-ff release/v0.2.0`
+7. Push changes: `git push origin master && git push origin v0.2.0`
+
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/). To update the version:

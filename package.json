@@ -1,6 +1,6 @@
 {
   "name": "scaleup-admin-heroui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
@@ -23,6 +23,7 @@
     "@heroui/system": "2.4.13",
     "@heroui/theme": "2.4.13",
     "@react-aria/visually-hidden": "3.8.21",
+    "axios": "^1.8.4",
     "clsx": "2.1.1",
     "framer-motion": "11.13.1",
     "intl-messageformat": "^10.5.0",

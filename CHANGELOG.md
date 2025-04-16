@@ -1,19 +1,39 @@
 # Changelog
 
-All notable changes to the ScaleUp Admin HeroUI project will be documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [0.1.0] - 2025-04-17
+## [0.2.0] - 2023-10-10
 
 ### Added
-- Initial project setup with Next.js and HeroUI
-- Admin layout with collapsible sidebar
-- Dashboard page with statistics and user table
-- Users management page with search functionality
-- Icon components for admin interface
-- Custom layout pattern in _app.tsx for page-specific layouts
-- Responsive design for mobile and desktop views 
+- Authentication implementation with axios
+- Login functionality with proper error handling
+- Remember me feature for login credentials
+- Default credentials in development mode
+- Error boundaries for catching and displaying user-friendly errors
+- Custom error handling hook (useApiError)
+- Global error handling for authentication errors
+
+### Changed
+- Updated login form to display proper error messages
+- Improved validation on the login form
+- Enhanced error messages for API errors
+- Implemented better token management in localStorage
+
+### Fixed
+- Unhandled runtime errors during failed authentication
+- Login form submission handling to prevent uncaught exceptions
+- API error display in login form
+- Authentication token handling to prevent redirect loops
+
+## [0.1.0] - 2023-10-01
+
+### Added
+- Initial project setup with Next.js
+- Implementation of HeroUI component library
+- Basic page structure and layout
+- Authentication page templates (login, register, forgot password)
+- Dashboard page structure
+- Basic navigation components 

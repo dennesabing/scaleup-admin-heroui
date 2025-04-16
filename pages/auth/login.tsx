@@ -1,8 +1,11 @@
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Link } from "@heroui/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
+import { login } from "@/lib/auth";
+import useApiError from "@/hooks/useApiError";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -11,6 +14,47 @@ export default function Login() {
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { error, clearError, handleError } = useApiError();
+
+  // Set default credentials in development mode or get remembered email
+  useEffect(() => {
+    // Get remembered email if it exists
+    if (typeof window !== 'undefined') {
+      const rememberedEmail = localStorage.getItem("rememberedEmail");
+      
+      if (process.env.NODE_ENV === 'development') {
+        setFormData(prev => ({
+          ...prev,
+          email: "admin@example.com",
+          password: "password12345GG$$",
+          rememberMe: true
+        }));
+      } else if (rememberedEmail) {
+        setFormData(prev => ({
+          ...prev,
+          email: rememberedEmail,
+          rememberMe: true
+        }));
+      }
+    }
+  }, []);
+
+  // Error handling for uncaught errors
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      event.preventDefault();
+      console.error("Global error caught:", event.error);
+      handleError(event.error || "An unexpected error occurred");
+      setIsLoading(false);
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+    };
+  }, [handleError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -18,27 +62,34 @@ export default function Login() {
     setFormData((prev) => ({ ...prev, [name]: inputValue }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // TODO: Connect to API
+    // Clear any previous errors
+    clearError();
     setIsLoading(true);
-    
+
+    // Wrap in try-catch to ensure all errors are handled
     try {
-      // Placeholder for API call
-      console.log("Login data:", formData);
+      // Call login function from auth service
+      const { email, password, rememberMe } = formData;
+      await login(email, password);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save email in localStorage if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
       
-      // TODO: Handle response from API and redirect to dashboard
-      window.location.href = "/admin";
-    } catch (error) {
-      console.error("Login error:", error);
+      // Redirect to dashboard/admin page
+      router.push("/admin");
+    } catch (err: unknown) {
+      handleError(err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, router, clearError, handleError]);
 
   return (
     <>
@@ -57,7 +108,39 @@ export default function Login() {
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="rounded-md bg-blue-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    <strong>Dev Mode:</strong> Using default credentials
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md bg-danger-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-danger">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium">
@@ -117,6 +200,7 @@ export default function Login() {
                 color="primary"
                 className="w-full"
                 isLoading={isLoading}
+                disabled={isLoading}
               >
                 Sign in
               </Button>

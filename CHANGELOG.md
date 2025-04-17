@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-04-17
+
+## Forgot Password Flow
+### Added
+- New reset-password/change.tsx page to handle password reset with token
+- Special UI for expired/invalid token scenarios
+- User-friendly error handling for token expiration
+- Client-side email validation in forgot-password.tsx
+
+### Changed
+- Updated forgot-password.tsx to always show success message (security improvement)
+- Modified success message wording to be more secure (not confirming account existence)
+- Improved error handling with more descriptive messages
+- Enhanced recovery guidance if reset email isn't received
+
+### Security Improvements
+- No longer revealing if an email address exists in the system
+- Clear expired token handling with simple recovery path
+
 ## [0.3.0] - 2025-04-17
 
 ### Fixed

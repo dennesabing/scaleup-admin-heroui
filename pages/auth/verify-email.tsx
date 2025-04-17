@@ -3,57 +3,67 @@ import { Link } from "@heroui/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { verifyEmail, formatApiError, getAuth } from "../../lib/auth";
+import { useAuth } from "../../lib/authMiddleware";
+import ResendVerificationEmail from "../../components/ResendVerificationEmail";
 
 export default function VerifyEmail() {
   const router = useRouter();
-  const { token } = router.query;
+  const { id, hash } = router.query;
+  
+  // Only redirect to admin if we don't have id & hash and no verification is in progress
+  // This allows both:
+  // 1. Already authenticated users to verify a new email
+  // 2. Successful verification to show the success message
+  const [verificationAttempted, setVerificationAttempted] = useState(false);
+  const shouldRedirect = false;//(!id || !hash) && !verificationAttempted;
+  
+  // Redirect to admin dashboard only if already authenticated and missing verification parameters
+  // and no verification has been attempted
+  // useAuth({ redirectIfFound: shouldRedirect });
   
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const auth = getAuth();
+    setIsAuthenticated(!!auth);
+  }, []);
 
   // Effect to verify token when available
   useEffect(() => {
-    if (!token) return;
+    if (!id || !hash || typeof id !== 'string' || typeof hash !== 'string') return;
 
-    const verifyEmailToken = async () => {
+    const verifyEmailHash = async () => {
+      setVerificationAttempted(true);
       try {
-        // TODO: Connect to API to verify token
-        console.log("Verifying token:", token);
-        
-        // Simulate API delay and success
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Set success state
-        setStatus("success");
-      } catch (error) {
-        console.error("Email verification error:", error);
-        setError("The verification link is invalid or has expired. Please request a new verification link.");
+        await verifyEmail(id, hash);
+        // Add a small delay to ensure the UI transition feels natural
+        setTimeout(() => {
+          setStatus("success");
+          setIsLoading(false);
+        }, 500);
+      } catch (err) {
+        console.error("Email verification error:", err);
+        const errorMessage = err instanceof Error ? err.message : formatApiError(err);
+        setError(errorMessage || "The verification link is invalid or has expired. Please request a new verification link.");
         setStatus("error");
-      } finally {
         setIsLoading(false);
       }
     };
 
-    verifyEmailToken();
-  }, [token]);
+    verifyEmailHash();
+  }, [id, hash]);
 
-  const resendVerificationEmail = async () => {
-    setIsLoading(true);
-    
-    try {
-      // TODO: Connect to API to resend verification email
-      console.log("Resending verification email");
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert("A new verification email has been sent. Please check your inbox.");
-    } catch (error) {
-      console.error("Resend verification error:", error);
-      alert("Failed to resend verification email. Please try again later.");
-    } finally {
-      setIsLoading(false);
+  // Handle navigation based on authentication status
+  const handleNavigation = () => {
+    if (isAuthenticated) {
+      router.push("/admin");
+    } else {
+      router.push("/auth/login");
     }
   };
 
@@ -89,9 +99,9 @@ export default function VerifyEmail() {
                 <Button 
                   color="primary" 
                   className="w-full"
-                  onClick={() => router.push("/auth/login")}
+                  onClick={handleNavigation}
                 >
-                  Continue to Login
+                  {isAuthenticated ? "Back to Home" : "Continue to Login"}
                 </Button>
               </div>
             </>
@@ -107,17 +117,13 @@ export default function VerifyEmail() {
               <h1 className="mt-4 text-2xl font-bold tracking-tight text-danger">Verification failed</h1>
               <p className="mt-2 text-default-600">{error}</p>
               <div className="mt-6 space-y-4">
-                <Button 
-                  color="primary" 
-                  className="w-full"
-                  onClick={resendVerificationEmail}
-                  isLoading={isLoading}
-                >
-                  Resend Verification Email
-                </Button>
+                <ResendVerificationEmail 
+                  buttonText="Resend Verification Email"
+                  fullWidth
+                />
                 <div>
-                  <Link href="/auth/login" className="text-primary">
-                    Back to login
+                  <Link href={isAuthenticated ? "/admin" : "/auth/login"} className="text-primary">
+                    {isAuthenticated ? "Back to Home" : "Back to Login"}
                   </Link>
                 </div>
               </div>

@@ -3,29 +3,31 @@ import { Input } from "@heroui/input";
 import { Link } from "@heroui/link";
 import { useState } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
+import { forgotPassword } from "@/lib/auth";
+import { useAuth } from "@/lib/authMiddleware";
 
 export default function ForgotPassword() {
+  // Redirect to admin dashboard if already authenticated
+  useAuth({ redirectIfFound: true });
+  
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // TODO: Connect to API
+    setError(null);
     setIsLoading(true);
     
     try {
-      // Placeholder for API call
-      console.log("Reset password for:", email);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Set submitted state to show success message
+      await forgotPassword(email);
       setIsSubmitted(true);
-    } catch (error) {
-      console.error("Password reset error:", error);
+    } catch (err) {
+      console.error("Password reset error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -46,6 +48,21 @@ export default function ForgotPassword() {
                   Enter your email address and we'll send you a link to reset your password.
                 </p>
               </div>
+
+              {error && (
+                <div className="rounded-md bg-danger-50 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-danger">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                 <div>

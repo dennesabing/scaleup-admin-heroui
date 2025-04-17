@@ -4,16 +4,21 @@ import { Link } from "@heroui/link";
 import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { login } from "@/lib/auth";
+import { login, resendVerificationEmail } from "@/lib/auth";
 import useApiError from "@/hooks/useApiError";
+import { useAuth } from "@/lib/authMiddleware";
 
 export default function Login() {
+  // Redirect to admin dashboard if already authenticated
+  useAuth({ redirectIfFound: true });
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
   const { error, clearError, handleError } = useApiError();
 
@@ -40,6 +45,13 @@ export default function Login() {
     }
   }, []);
 
+  // Check for success message in query params
+  useEffect(() => {
+    if (router.query.message) {
+      setSuccessMessage(router.query.message as string);
+    }
+  }, [router.query]);
+
   // Error handling for uncaught errors
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
@@ -65,8 +77,9 @@ export default function Login() {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear any previous errors
+    // Clear any previous errors or success messages
     clearError();
+    setSuccessMessage(null);
     setIsLoading(true);
 
     // Wrap in try-catch to ensure all errors are handled
@@ -85,11 +98,32 @@ export default function Login() {
       // Redirect to dashboard/admin page
       router.push("/admin");
     } catch (err: unknown) {
-      handleError(err);
+      // Check if the error is due to unverified email
+      const errorMessage = err instanceof Error ? err.message : '';
+      if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('verify')) {
+        // Show a special error message for unverified email
+        handleError(new Error('Please verify your email address before logging in.'));
+        // Store the email in session storage to use for resending verification
+        if (typeof window !== 'undefined' && formData.email) {
+          sessionStorage.setItem('pendingVerificationEmail', formData.email);
+        }
+      } else {
+        handleError(err);
+      }
     } finally {
       setIsLoading(false);
     }
   }, [formData, router, clearError, handleError]);
+
+  // Function to handle resending verification email
+  const handleResendVerification = useCallback(async () => {
+    try {
+      await resendVerificationEmail();
+      setSuccessMessage('Verification email has been sent. Please check your inbox.');
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
 
   return (
     <>
@@ -125,6 +159,21 @@ export default function Login() {
             </div>
           )}
 
+          {successMessage && (
+            <div className="rounded-md bg-success-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-success" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-success-700">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-md bg-danger-50 p-4">
               <div className="flex">
@@ -135,6 +184,14 @@ export default function Login() {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-danger">{error}</p>
+                  {error.toLowerCase().includes('verify') && (
+                    <button 
+                      onClick={handleResendVerification}
+                      className="mt-2 text-sm font-medium text-primary hover:text-primary-dark"
+                    >
+                      Resend verification email
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

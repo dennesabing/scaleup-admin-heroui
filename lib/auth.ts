@@ -9,9 +9,9 @@ export interface AuthModel {
 export interface UserModel {
   id: number;
   email: string;
-  first_name: string;
-  last_name: string;
-  fullname?: string;
+  name?: string;
+  email_verified_at?: string | null;
+  roles?: string[];
 }
 
 export interface ApiError {
@@ -121,6 +121,7 @@ const API_ENDPOINTS = {
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
   VERIFY_EMAIL: '/auth/verify-email',
+  VERIFY_EMAIL_SEND: '/auth/verify-email/send',
   ME: '/me',
 };
 
@@ -151,7 +152,7 @@ export const login = async (email: string, password: string): Promise<{ auth: Au
     // Fetch user data with separate error handling
     try {
       const userResponse = await axiosInstance.get(API_ENDPOINTS.ME);
-      const user = userResponse.data as UserModel;
+      const user = userResponse.data.data as UserModel;
       setCurrentUser(user);
       return { auth, user };
     } catch (userError) {
@@ -160,8 +161,7 @@ export const login = async (email: string, password: string): Promise<{ auth: Au
       const minimalUser: UserModel = {
         id: 0,
         email,
-        first_name: '',
-        last_name: '',
+        name: '',
       };
       return { auth, user: minimalUser };
     }
@@ -187,15 +187,17 @@ export const logout = (): void => {
 export const register = async (
   email: string, 
   password: string, 
-  firstName: string, 
-  lastName: string
+  name: string,
+  password_confirmation: string,
+  accept_terms: boolean
 ): Promise<{ auth: AuthModel, user: UserModel }> => {
   try {
     const response = await axiosInstance.post(API_ENDPOINTS.REGISTER, {
       email,
       password,
-      first_name: firstName,
-      last_name: lastName
+      name,
+      password_confirmation,
+      accept_terms
     });
     
     const auth = response.data as AuthModel;
@@ -203,7 +205,7 @@ export const register = async (
     
     // Fetch user data
     const userResponse = await axiosInstance.get(API_ENDPOINTS.ME);
-    const user = userResponse.data as UserModel;
+    const user = userResponse.data.data as UserModel;
     setCurrentUser(user);
     
     return { auth, user };
@@ -240,9 +242,18 @@ export const resetPassword = async (
   }
 };
 
-export const verifyEmail = async (token: string): Promise<void> => {
+export const verifyEmail = async (id: string, hash: string): Promise<void> => {
   try {
-    await axiosInstance.post(API_ENDPOINTS.VERIFY_EMAIL, { token });
+    await axiosInstance.get(`${API_ENDPOINTS.VERIFY_EMAIL}/${id}/${hash}`);
+  } catch (error) {
+    const errorMessage = formatApiError(error);
+    throw new Error(errorMessage);
+  }
+};
+
+export const resendVerificationEmail = async (): Promise<void> => {
+  try {
+    await axiosInstance.post(API_ENDPOINTS.VERIFY_EMAIL_SEND);
   } catch (error) {
     const errorMessage = formatApiError(error);
     throw new Error(errorMessage);
@@ -252,7 +263,7 @@ export const verifyEmail = async (token: string): Promise<void> => {
 export const getUser = async (): Promise<UserModel> => {
   try {
     const response = await axiosInstance.get(API_ENDPOINTS.ME);
-    const user = response.data as UserModel;
+    const user = response.data.data as UserModel;
     setCurrentUser(user);
     return user;
   } catch (error) {

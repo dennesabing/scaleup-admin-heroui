@@ -2,7 +2,9 @@ import { Divider } from "@heroui/divider";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Users, SearchIcon, Settings } from "@/components/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { getCurrentUser } from "@/lib/auth";
 
 import AdminLayout from "@/layouts/admin";
 
@@ -18,8 +20,20 @@ const users = [
 ];
 
 export default function AdminUsers() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push("/auth/login");
+      }
+    };
+
+    checkAuthentication();
+  }, [router]);
+
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email.toLowerCase().includes(searchTerm.toLowerCase())

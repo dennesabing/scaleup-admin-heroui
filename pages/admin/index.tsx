@@ -1,6 +1,9 @@
 import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
+import { useEffect } from "react";
 import { Users, DollarSign, ShoppingBag, TicketIcon } from "@/components/icons";
+import { getCurrentUser } from "@/lib/auth";
+import { useRouter } from "next/router";
 
 import AdminLayout from "@/layouts/admin";
 
@@ -27,6 +30,19 @@ const recentUsers = [
 ];
 
 export default function AdminDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push("/auth/login");
+      }
+    };
+
+    checkAuthentication();
+  }, [router]);
+
   return (
     <div className="space-y-6">
       <div>

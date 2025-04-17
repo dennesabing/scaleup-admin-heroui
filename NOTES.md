@@ -10,11 +10,18 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 - [x] Users page
 - [ ] Connect to ScaleUp API endpoints
 - [ ] Authentication flows:
-  - [ ] Registration page
-  - [ ] Login page
-  - [ ] Forgot password flow
-  - [ ] Email verification
-- [ ] Protected routes for authenticated users
+  - [x] Registration page
+  - [x] Login page
+  - [x] Forgot password flow v0.4.0 feat/forgot-password-flow
+  - [x] Email verification v0.3.0/1
+- [x] Protected routes for authenticated users v0.3.0/1
+- remove messages carried over to the url address
+- tests chore/test-login
+- implement http-only rather than saving to the local storage feat/
+- forgot password
+  - even if email is not found, just display a success message.
+  - modify the success message to check email address if account is found.
+    - If email address is found, then we sent an a password link to
 
 ## Phase 2: Core CRM Features
 

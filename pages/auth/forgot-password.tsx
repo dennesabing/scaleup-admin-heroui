@@ -19,6 +19,13 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic email validation
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    
     setError(null);
     setIsLoading(true);
     
@@ -26,8 +33,10 @@ export default function ForgotPassword() {
       await forgotPassword(email);
       setIsSubmitted(true);
     } catch (err) {
+      // For security reasons, we don't want to reveal if an email exists or not
+      // So we still show success message even if the API returns an error
       console.error("Password reset error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setIsSubmitted(true); // Always show success message
     } finally {
       setIsLoading(false);
     }
@@ -101,10 +110,10 @@ export default function ForgotPassword() {
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-success">Check your email</h1>
               <p className="mt-4 text-default-600">
-                We've sent a password reset link to <strong>{email}</strong>
+                If <strong>{email}</strong> is associated with an account, we've sent a password reset link to this address.
               </p>
               <p className="mt-2 text-default-500">
-                If you don't see it in your inbox, please check your spam folder.
+                If you don't see it in your inbox, please check your spam folder or try again with the correct email address.
               </p>
               <div className="mt-6">
                 <Link href="/auth/login" className="text-primary">

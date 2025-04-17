@@ -45,12 +45,36 @@ export default function Login() {
     }
   }, []);
 
-  // Check for success message in query params
+  // Check for messages from different sources
   useEffect(() => {
-    if (router.query.message) {
-      setSuccessMessage(router.query.message as string);
+    // First check for message in session storage
+    if (typeof window !== 'undefined') {
+      const sessionMessage = sessionStorage.getItem("alertMessage");
+      if (sessionMessage) {
+        setSuccessMessage(sessionMessage);
+        // Remove message after displaying it
+        sessionStorage.removeItem("alertMessage");
+      }
     }
-  }, [router.query]);
+    
+    // For backward compatibility, also check for message in query params
+    // and clean up the URL if found
+    if (router.isReady && router.query.message) {
+      setSuccessMessage(router.query.message as string);
+      
+      // Clean up the URL by removing the message query parameter
+      const { pathname } = router;
+      const query = { ...router.query };
+      delete query.message;
+      
+      // Use shallow routing to update the URL without full page reload
+      router.replace(
+        { pathname, query },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router.isReady, router.query]);
 
   // Error handling for uncaught errors
   useEffect(() => {
@@ -257,7 +281,7 @@ export default function Login() {
                 color="primary"
                 className="w-full"
                 isLoading={isLoading}
-                disabled={isLoading}
+                isDisabled={isLoading}
               >
                 Sign in
               </Button>

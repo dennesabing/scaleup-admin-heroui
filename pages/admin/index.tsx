@@ -1,9 +1,10 @@
 import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
-import { useEffect } from "react";
-import { Users, DollarSign, ShoppingBag, TicketIcon } from "@/components/icons";
+import { useEffect, useState } from "react";
+import { Users, DollarSign, ShoppingBag, TicketIcon, X as XIcon } from "@/components/icons";
 import { getCurrentUser } from "@/lib/auth";
 import { useRouter } from "next/router";
+import { useAuth } from "@/lib/authMiddleware";
 
 import AdminLayout from "@/layouts/admin";
 
@@ -31,17 +32,44 @@ const recentUsers = [
 
 export default function AdminDashboard() {
   const router = useRouter();
+  // Use the useAuth hook for authentication protection
+  useAuth();
+  
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Check for alert messages in session storage or query params
   useEffect(() => {
-    const checkAuthentication = async () => {
-      const user = await getCurrentUser();
-      if (!user) {
-        router.push("/auth/login");
+    // Check for message in session storage
+    if (typeof window !== 'undefined') {
+      const sessionMessage = sessionStorage.getItem("alertMessage");
+      if (sessionMessage) {
+        setSuccessMessage(sessionMessage);
+        // Remove message after displaying it
+        sessionStorage.removeItem("alertMessage");
       }
-    };
+    }
+    
+    // For backward compatibility, check for message in query params
+    // and clean up the URL if found
+    if (router.isReady && router.query.message) {
+      setSuccessMessage(router.query.message as string);
+      
+      // Clean up the URL
+      const { pathname } = router;
+      const query = { ...router.query };
+      delete query.message;
+      
+      router.replace(
+        { pathname, query },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [router.isReady, router.query]);
 
-    checkAuthentication();
-  }, [router]);
+  const dismissMessage = () => {
+    setSuccessMessage(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -49,6 +77,31 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-default-500">Welcome to your admin dashboard</p>
       </div>
+
+      {successMessage && (
+        <div className="rounded-md bg-success-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-success" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-grow">
+              <p className="text-sm text-success-700">{successMessage}</p>
+            </div>
+            <div>
+              <button
+                type="button"
+                className="inline-flex text-success-400 hover:text-success-500"
+                onClick={dismissMessage}
+              >
+                <span className="sr-only">Dismiss</span>
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => {

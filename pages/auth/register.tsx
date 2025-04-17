@@ -6,6 +6,7 @@ import Head from "next/head";
 import { register, formatApiError, getAuth } from "../../lib/auth";
 import { useRouter } from "next/router";
 import { useAuth } from "../../lib/authMiddleware";
+import { redirectWithMessage } from "../../lib/navigation";
 
 export default function Register() {
   const router = useRouter();
@@ -103,13 +104,12 @@ export default function Register() {
         formData.accept_terms
       );
       
-      // Redirect to login page with success message
-      router.push({
-        pathname: "/admin",
-        query: { 
-          message: "Registration successful! Please check your email to verify your account." 
-        }
-      });
+      // Redirect to login page with success message using the new utility
+      redirectWithMessage(
+        router,
+        "/auth/login",
+        "Registration successful! Please check your email to verify your account."
+      );
     } catch (error) {
       // Handle API errors
       const errorMessage = error instanceof Error ? error.message : formatApiError(error);

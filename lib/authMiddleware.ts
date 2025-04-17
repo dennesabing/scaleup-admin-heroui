@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, removeAuth, removeCurrentUser } from './auth';
+import { redirectWithMessage } from './navigation';
 
 interface UseAuthOptions {
   redirectTo?: string;
   redirectIfFound?: boolean;
+  redirectMessage?: string;
 }
 
 /**
@@ -13,11 +15,16 @@ interface UseAuthOptions {
  * @param options Configuration options
  * @param options.redirectTo Where to redirect if authentication fails (default: '/auth/login')
  * @param options.redirectIfFound Redirect if auth is found (for login pages, default: false)
+ * @param options.redirectMessage Optional message to display after redirect
  * 
  * @returns Object with isAuthenticated flag
  */
 export function useAuth(options: UseAuthOptions = {}) {
-  const { redirectTo = '/auth/login', redirectIfFound = false } = options;
+  const { 
+    redirectTo = '/auth/login', 
+    redirectIfFound = false,
+    redirectMessage 
+  } = options;
   const router = useRouter();
   
   useEffect(() => {
@@ -29,7 +36,11 @@ export function useAuth(options: UseAuthOptions = {}) {
     // If redirectIfFound is true, redirect if auth is found
     // This is useful for pages like login that should redirect to dashboard if already logged in
     if (redirectIfFound && auth) {
-      router.push('/admin');
+      if (redirectMessage) {
+        redirectWithMessage(router, '/admin', redirectMessage);
+      } else {
+        router.push('/admin');
+      }
       return;
     }
     
@@ -39,13 +50,18 @@ export function useAuth(options: UseAuthOptions = {}) {
       removeAuth();
       removeCurrentUser();
       
-      // Redirect to login page with return URL
-      router.push({
-        pathname: redirectTo,
-        query: { returnUrl: router.asPath }
-      });
+      // Redirect to login page with optional message
+      if (redirectMessage) {
+        redirectWithMessage(router, redirectTo, redirectMessage, { replace: true });
+      } else {
+        // Store the current URL as returnUrl for after login (if no message)
+        router.replace({
+          pathname: redirectTo,
+          query: { returnUrl: router.asPath }
+        });
+      }
     }
-  }, [redirectIfFound, redirectTo, router]);
+  }, [redirectIfFound, redirectTo, redirectMessage, router]);
   
   return { isAuthenticated: !!getAuth() };
 } 

@@ -20,16 +20,18 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
   - [x] Forgot password flow v0.4.0 feat/forgot-password-flow
   - [x] Email verification v0.3.0/1
 - [x] Protected routes for authenticated users v0.3.0/1
-- remove messages carried over to the url address
+- [] remove messages carried over to the url address v0.4.1 fix/remove-messages-in-url
 - [] tests
-    - [] login form - chore/test-login v0.4.1
-    - [] register form
-    - [] forgot-password form
-- implement http-only rather than saving to the local storage feat/
-- forgot password
-  - even if email is not found, just display a success message.
-  - modify the success message to check email address if account is found.
-    - If email address is found, then we sent an a password link to
+    - [x] login form - chore/test-login v0.4.1
+    - [x] register form
+    - [x] forgot-password form
+    - [] email verify
+    - [] admin dashboard loads
+- [] implement http-only rather than saving to the local storage feat/
+- [x] forgot password
+  - [x] even if email is not found, just display a success message.
+    - modify the success message to check email address if account is found.
+    - if email address is found, then we sent an a password link to
 
 ## Phase 2: Core CRM Features
 

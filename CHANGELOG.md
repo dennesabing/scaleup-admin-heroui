@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-04-17
+
+### Added
+- New navigation utility module in `lib/navigation.ts` with:
+  - `redirectWithMessage` function to handle redirects with session storage messages
+  - `redirectToLogin` helper function
+  - `redirectToAdmin` helper function
+- X (close) icon component added to the icon library
+
+### Changed
+- Updated login page to check for messages in session storage
+- Modified login page to clean up URL query parameters after displaying messages
+- Enhanced admin dashboard to display alert messages from session storage
+- Added close button functionality for dismissing alerts
+- Updated register page to use the new `redirectWithMessage` utility
+- Updated auth middleware to use session storage for messages
+
+### Improved
+- Better user experience with cleaner URLs (no query parameters)
+- Enhanced security by not exposing alert messages in URLs
+- More consistent alert message handling across the application
+- Reduced network overhead by eliminating URL parameter parsing
+
 ## [0.4.1] - 2025-04-17
 
 ## Changelog for Login Test File Fix
@@ -101,4 +124,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic page structure and layout
 - Authentication page templates (login, register, forgot password)
 - Dashboard page structure
-- Basic navigation components 
+- Basic navigation components
+
+## [Unreleased]
+
+### Added
+- New navigation utility module in `lib/navigation.ts` with:
+  - `redirectWithMessage` function to handle redirects with session storage messages
+  - `redirectToLogin` helper function
+  - `redirectToAdmin` helper function
+- X (close) icon component added to the icon library
+
+### Changed
+- Updated login page to check for messages in session storage
+- Modified login page to clean up URL query parameters after displaying messages
+- Enhanced admin dashboard to display alert messages from session storage
+- Added close button functionality for dismissing alerts
+- Updated register page to use the new `redirectWithMessage` utility
+- Updated auth middleware to use session storage for messages
+
+### Improved
+- Better user experience with cleaner URLs (no query parameters)
+- Enhanced security by not exposing alert messages in URLs
+- More consistent alert message handling across the application
+- Reduced network overhead by eliminating URL parameter parsing 

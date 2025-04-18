@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getAuth, removeAuth, removeCurrentUser } from './auth';
+import { getCurrentUser, removeCurrentUser } from './auth';
 import { redirectWithMessage } from './navigation';
 
 interface UseAuthOptions {
@@ -31,11 +31,12 @@ export function useAuth(options: UseAuthOptions = {}) {
     // If no window, we're on the server, so do nothing
     if (typeof window === 'undefined') return;
 
-    const auth = getAuth();
+    // Get user data from localStorage
+    const user = getCurrentUser();
     
-    // If redirectIfFound is true, redirect if auth is found
+    // If redirectIfFound is true, redirect if user is found
     // This is useful for pages like login that should redirect to dashboard if already logged in
-    if (redirectIfFound && auth) {
+    if (redirectIfFound && user) {
       if (redirectMessage) {
         redirectWithMessage(router, '/admin', redirectMessage);
       } else {
@@ -44,10 +45,9 @@ export function useAuth(options: UseAuthOptions = {}) {
       return;
     }
     
-    // Otherwise, redirect if auth is not found (for protected pages)
-    if (!redirectIfFound && !auth) {
-      // Clean up any stale auth data
-      removeAuth();
+    // Otherwise, redirect if user is not found (for protected pages)
+    if (!redirectIfFound && !user) {
+      // Clean up any stale user data
       removeCurrentUser();
       
       // Redirect to login page with optional message
@@ -63,5 +63,5 @@ export function useAuth(options: UseAuthOptions = {}) {
     }
   }, [redirectIfFound, redirectTo, redirectMessage, router]);
   
-  return { isAuthenticated: !!getAuth() };
+  return { isAuthenticated: !!getCurrentUser() };
 } 

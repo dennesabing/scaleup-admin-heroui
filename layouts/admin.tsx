@@ -84,9 +84,15 @@ export default function AdminLayout({
   }, []);
   
   // Handle logout
-  const handleLogout = () => {
-    logout();
-    router.push('/auth/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Still redirect to login page even if the server-side logout fails
+      router.push('/auth/login');
+    }
   };
 
   return (

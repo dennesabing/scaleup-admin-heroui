@@ -1,9 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import axiosInstance from './axios';
 
+// Remove token-related interfaces
 export interface AuthModel {
-  access_token: string;
-  api_token?: string;
+  // No longer storing tokens in localStorage
 }
 
 export interface UserModel {
@@ -11,43 +11,18 @@ export interface UserModel {
   email: string;
   name?: string;
   email_verified_at?: string | null;
-  roles?: string[];
+  // Add other user properties as needed
 }
 
 export interface ApiError {
   message?: string;
   error?: string;
   errors?: Record<string, string[]>;
-  status?: number;
 }
 
-const AUTH_STORAGE_KEY = 'auth';
 const USER_STORAGE_KEY = 'user';
 
 // Authentication helpers
-export const getAuth = (): AuthModel | null => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const authString = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!authString) return null;
-    return JSON.parse(authString) as AuthModel;
-  } catch (error) {
-    console.error('Error parsing auth data:', error);
-    return null;
-  }
-};
-
-export const setAuth = (auth: AuthModel): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
-};
-
-export const removeAuth = (): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-};
-
 export const getCurrentUser = (): UserModel | null => {
   if (typeof window === 'undefined') return null;
   
@@ -122,39 +97,155 @@ const API_ENDPOINTS = {
   RESET_PASSWORD: '/auth/reset-password',
   VERIFY_EMAIL: '/auth/verify-email',
   VERIFY_EMAIL_SEND: '/auth/verify-email/send',
+  LOGOUT: '/auth/logout',
   ME: '/me',
+  SANCTUM_CSRF_COOKIE: '/csrf',
 };
 
 // Auth service functions
-export const login = async (email: string, password: string): Promise<{ auth: AuthModel, user: UserModel }> => {
-  // Remove any existing auth data before attempting login
-  removeAuth();
+export const login = async (email: string, password: string): Promise<{ user: UserModel }> => {
+  // Remove any existing user data before attempting login
   removeCurrentUser();
   
   try {
-    // Make login request with proper error handling
-    const response = await axiosInstance.post(API_ENDPOINTS.LOGIN, { email, password })
-      .catch((error) => {
-        // Handle 401 errors explicitly
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-          throw new Error('Invalid email or password');
+    console.log('Starting login process with enhanced CSRF handling');
+    
+    // Make multiple attempts to get a valid CSRF token
+    let attempts = 0;
+    const maxAttempts = 3;
+    let loginSuccess = false;
+    let lastError = null;
+    
+    while (!loginSuccess && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Login attempt ${attempts} of ${maxAttempts}`);
+      
+      try {
+        // Get CSRF token before login using our proxy
+        const response = await axios.get(`/api/proxy/csrf`, {
+          withCredentials: true
+        });
+        
+        console.log(`Login attempt ${attempts}: Received CSRF response:`, response.data);
+        
+        // Wait longer for cookie to be properly set
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Log all cookies for debugging
+        console.log(`Login attempt ${attempts}: All cookies:`, document.cookie);
+        
+        // Collection of token formats to try
+        const tokenFormats = [];
+        
+        // Raw token from cookie
+        const rawToken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('XSRF-TOKEN='))
+          ?.split('=')[1];
+        
+        if (rawToken) {
+          tokenFormats.push({ 
+            type: 'raw-cookie', 
+            token: rawToken, 
+            headers: { 'X-XSRF-TOKEN': rawToken }
+          });
+          
+          // Also try decoded version
+          tokenFormats.push({ 
+            type: 'decoded-cookie', 
+            token: decodeURIComponent(rawToken), 
+            headers: { 'X-XSRF-TOKEN': decodeURIComponent(rawToken) }
+          });
         }
         
-        // Format and throw other errors
-        const errorMessage = formatApiError(error);
-        throw new Error(errorMessage);
-      });
+        // Token from response
+        if (response.data?.raw_csrf_token) {
+          tokenFormats.push({ 
+            type: 'raw-response', 
+            token: response.data.raw_csrf_token, 
+            headers: { 'X-XSRF-TOKEN': response.data.raw_csrf_token }
+          });
+        }
+        
+        if (response.data?.csrf_token) {
+          tokenFormats.push({ 
+            type: 'decoded-response', 
+            token: response.data.csrf_token, 
+            headers: { 'X-XSRF-TOKEN': response.data.csrf_token }
+          });
+        }
+        
+        // Meta tag token
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+          tokenFormats.push({ 
+            type: 'meta', 
+            token: metaToken, 
+            headers: { 'X-XSRF-TOKEN': metaToken }
+          });
+        }
+        
+        if (tokenFormats.length === 0) {
+          console.error('No CSRF tokens available to try');
+          throw new Error('CSRF token not found. Please ensure cookies are enabled in your browser and try again.');
+        }
+        
+        console.log(`Login attempt ${attempts}: Found ${tokenFormats.length} token formats to try`);
+        
+        // Try each token format
+        let tokenSuccess = false;
+        let tokenError = null;
+        
+        for (const format of tokenFormats) {
+          try {
+            console.log(`Login attempt ${attempts}: Trying ${format.type} token:`, format.token);
+            
+            // Make login request with this token format
+            await axiosInstance.post(
+              API_ENDPOINTS.LOGIN,
+              { email, password },
+              { headers: format.headers }
+            );
+            
+            console.log(`Login attempt ${attempts}: Success with ${format.type} token!`);
+            tokenSuccess = true;
+            loginSuccess = true;
+            break;
+          } catch (err) {
+            console.error(`Login attempt ${attempts}: Failed with ${format.type} token:`, err);
+            tokenError = err;
+          }
+        }
+        
+        if (!tokenSuccess) {
+          console.error(`Login attempt ${attempts}: All token formats failed`);
+          throw tokenError || new Error('All CSRF token formats failed');
+        }
+        
+      } catch (err) {
+        console.error(`Login attempt ${attempts} failed:`, err);
+        lastError = err;
+        
+        // Wait before retry
+        if (attempts < maxAttempts) {
+          console.log(`Waiting before retry attempt ${attempts + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    if (!loginSuccess) {
+      console.error('All login attempts failed');
+      throw lastError || new Error('Login failed after multiple attempts');
+    }
     
     // If we got here, the login was successful
-    const auth = response.data as AuthModel;
-    setAuth(auth);
-    
     // Fetch user data with separate error handling
     try {
       const userResponse = await axiosInstance.get(API_ENDPOINTS.ME);
       const user = userResponse.data.data as UserModel;
       setCurrentUser(user);
-      return { auth, user };
+      return { user };
     } catch (userError) {
       // If user fetch fails, return a minimal user object
       console.warn('Error fetching user data:', userError);
@@ -163,25 +254,12 @@ export const login = async (email: string, password: string): Promise<{ auth: Au
         email,
         name: '',
       };
-      return { auth, user: minimalUser };
+      return { user: minimalUser };
     }
   } catch (error) {
-    // Make sure auth data is cleared on error
-    removeAuth();
-    removeCurrentUser();
-    
-    // Re-throw the error to be handled by the component
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('An unexpected error occurred during login');
-    }
+    const errorMessage = formatApiError(error);
+    throw new Error(errorMessage);
   }
-};
-
-export const logout = (): void => {
-  removeAuth();
-  removeCurrentUser();
 };
 
 export const register = async (
@@ -190,9 +268,17 @@ export const register = async (
   name: string,
   password_confirmation: string,
   accept_terms: boolean
-): Promise<{ auth: AuthModel, user: UserModel }> => {
+): Promise<{ user: UserModel }> => {
   try {
-    const response = await axiosInstance.post(API_ENDPOINTS.REGISTER, {
+    // Make a dedicated CSRF token request with our proxy
+    await axios.get(`/api/proxy/csrf`, {
+      withCredentials: true
+    });
+    
+    // Wait a moment for the cookie to be properly set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    await axiosInstance.post(API_ENDPOINTS.REGISTER, {
       email,
       password,
       name,
@@ -200,15 +286,12 @@ export const register = async (
       accept_terms
     });
     
-    const auth = response.data as AuthModel;
-    setAuth(auth);
-    
     // Fetch user data
     const userResponse = await axiosInstance.get(API_ENDPOINTS.ME);
     const user = userResponse.data.data as UserModel;
     setCurrentUser(user);
     
-    return { auth, user };
+    return { user };
   } catch (error) {
     const errorMessage = formatApiError(error);
     throw new Error(errorMessage);
@@ -217,6 +300,14 @@ export const register = async (
 
 export const forgotPassword = async (email: string): Promise<void> => {
   try {
+    // Make a dedicated CSRF token request with our proxy
+    await axios.get(`/api/proxy/csrf`, {
+      withCredentials: true
+    });
+    
+    // Wait a moment for the cookie to be properly set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     await axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, { email });
   } catch (error) {
     const errorMessage = formatApiError(error);
@@ -230,6 +321,14 @@ export const resetPassword = async (
   password: string
 ): Promise<void> => {
   try {
+    // Make a dedicated CSRF token request with our proxy
+    await axios.get(`/api/proxy/csrf`, {
+      withCredentials: true
+    });
+    
+    // Wait a moment for the cookie to be properly set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     await axiosInstance.post(API_ENDPOINTS.RESET_PASSWORD, {
       email,
       token,
@@ -251,12 +350,31 @@ export const verifyEmail = async (id: string, hash: string): Promise<void> => {
   }
 };
 
-export const resendVerificationEmail = async (): Promise<void> => {
+export const resendVerificationEmail = async (email: string): Promise<void> => {
   try {
-    await axiosInstance.post(API_ENDPOINTS.VERIFY_EMAIL_SEND);
+    // Make a dedicated CSRF token request with our proxy
+    await axios.get(`/api/proxy/csrf`, {
+      withCredentials: true
+    });
+    
+    // Wait a moment for the cookie to be properly set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    await axiosInstance.post(API_ENDPOINTS.VERIFY_EMAIL_SEND, { email });
   } catch (error) {
     const errorMessage = formatApiError(error);
     throw new Error(errorMessage);
+  }
+};
+
+export const logout = async (): Promise<void> => {
+  try {
+    await axiosInstance.post(API_ENDPOINTS.LOGOUT);
+    removeCurrentUser();
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still remove the user data even if the server request fails
+    removeCurrentUser();
   }
 };
 
@@ -270,4 +388,9 @@ export const getUser = async (): Promise<UserModel> => {
     const errorMessage = formatApiError(error);
     throw new Error(errorMessage);
   }
+};
+
+// Check if user is authenticated
+export const isAuthenticated = (): boolean => {
+  return !!getCurrentUser();
 }; 

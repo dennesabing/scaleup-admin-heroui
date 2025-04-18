@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { login, resendVerificationEmail } from "@/lib/auth";
 import useApiError from "@/hooks/useApiError";
 import { useAuth } from "@/lib/authMiddleware";
+import { logCSRFDebug, refreshCSRFToken } from "@/lib/csrf-debug";
 
 export default function Login() {
   // Redirect to admin dashboard if already authenticated
@@ -76,6 +77,22 @@ export default function Login() {
     }
   }, [router.isReady, router.query]);
 
+  // Debug CSRF on page load
+  useEffect(() => {
+    // Refresh CSRF token when component mounts
+    const initCSRF = async () => {
+      try {
+        await refreshCSRFToken();
+        console.log('CSRF token refreshed on page load: login');
+        logCSRFDebug();
+      } catch (err) {
+        console.error('Error refreshing CSRF token on page load:', err);
+      }
+    };
+    
+    initCSRF();
+  }, []);
+
   // Error handling for uncaught errors
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
@@ -92,201 +109,196 @@ export default function Login() {
     };
   }, [handleError]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    const inputValue = type === "checkbox" ? checked : value;
-    setFormData((prev) => ({ ...prev, [name]: inputValue }));
-  };
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
     
-    // Clear any previous errors or success messages
-    clearError();
-    setSuccessMessage(null);
-    setIsLoading(true);
+    // Clear any error message when user starts typing
+    if (error) clearError();
+    if (successMessage) setSuccessMessage(null);
+  }, [error, clearError, successMessage]);
 
-    // Wrap in try-catch to ensure all errors are handled
+  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    clearError();
+    setIsLoading(true);
+    
     try {
-      // Call login function from auth service
-      const { email, password, rememberMe } = formData;
-      await login(email, password);
+      // Log CSRF debug info before login attempt
+      logCSRFDebug();
       
-      // Save email in localStorage if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
+      // Call the login function - no need to refresh token here
+      await login(formData.email, formData.password);
+      
+      // Save email to localStorage if rememberMe is checked
+      if (formData.rememberMe) {
+        localStorage.setItem("rememberedEmail", formData.email);
       } else {
         localStorage.removeItem("rememberedEmail");
       }
+
+      // Get return URL from query string or default to /admin
+      const returnUrl = 
+        typeof router.query.returnUrl === 'string' 
+          ? router.query.returnUrl 
+          : '/admin';
       
-      // Redirect to dashboard/admin page
-      router.push("/admin");
-    } catch (err: unknown) {
-      // Check if the error is due to unverified email
-      const errorMessage = err instanceof Error ? err.message : '';
-      if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('verify')) {
-        // Show a special error message for unverified email
-        handleError(new Error('Please verify your email address before logging in.'));
-        // Store the email in session storage to use for resending verification
-        if (typeof window !== 'undefined' && formData.email) {
-          sessionStorage.setItem('pendingVerificationEmail', formData.email);
-        }
+      // Redirect to return URL
+      router.push(returnUrl);
+    } catch (err) {
+      // If error is CSRF related, try to refresh token and provide more info
+      if (err instanceof Error && err.message.includes('CSRF')) {
+        console.error('CSRF error detected:', err);
+        // Log additional debug info
+        logCSRFDebug();
+        
+        // Show more helpful error message
+        handleError(new Error('Authentication error: CSRF token mismatch. Please try refreshing the page.'));
       } else {
         handleError(err);
       }
-    } finally {
+      
       setIsLoading(false);
+      
+      // If error includes "not verified" text, show resend verification option
+      if (
+        err instanceof Error && 
+        err.message.toLowerCase().includes('not verified')
+      ) {
+        setSuccessMessage("Email not verified. Click the button below to resend verification email.");
+      }
     }
   }, [formData, router, clearError, handleError]);
 
-  // Function to handle resending verification email
   const handleResendVerification = useCallback(async () => {
+    setIsLoading(true);
+    clearError();
+    
     try {
-      await resendVerificationEmail();
-      setSuccessMessage('Verification email has been sent. Please check your inbox.');
+      await resendVerificationEmail(formData.email);
+      setSuccessMessage("Verification email has been sent. Please check your inbox.");
     } catch (err) {
       handleError(err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [handleError]);
+  }, [formData.email, clearError, handleError]);
 
   return (
     <>
       <Head>
-        <title>Login - ScaleUp CRM</title>
+        <title>Login | Admin Dashboard</title>
       </Head>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-8 rounded-xl bg-content1 p-8 shadow-md">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight">Sign in to your account</h1>
-            <p className="mt-2 text-default-500">
-              Don't have an account?{" "}
-              <Link href="/auth/register" className="text-primary">
-                Sign up
-              </Link>
-            </p>
-          </div>
+      <div className="flex min-h-screen flex-col justify-center bg-gray-100 py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+            Sign in to your account
+          </h2>
+        </div>
 
-          {process.env.NODE_ENV === 'development' && (
-            <div className="rounded-md bg-blue-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-blue-700">
-                    <strong>Dev Mode:</strong> Using default credentials
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="rounded-md bg-success-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-success" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-success-700">{successMessage}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-md bg-danger-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-danger">{error}</p>
-                  {error.toLowerCase().includes('verify') && (
-                    <button 
-                      onClick={handleResendVerification}
-                      className="mt-2 text-sm font-medium text-primary hover:text-primary-dark"
-                    >
-                      Resend verification email
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
-            <div className="space-y-4">
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium">
-                  Email Address
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email address
                 </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-1 block w-full"
-                />
+                <div className="mt-1">
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="block w-full"
+                  />
+                </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-sm font-medium">
-                    Password
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="mt-1">
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="block w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="rememberMe"
+                    name="rememberMe"
+                    type="checkbox"
+                    checked={formData.rememberMe}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                    Remember me
                   </label>
-                  <Link href="/auth/forgot-password" className="text-sm text-primary">
+                </div>
+
+                <div className="text-sm">
+                  <Link href="/auth/forgot-password" className="text-primary-600 hover:text-primary-500">
                     Forgot your password?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="mt-1 block w-full"
-                />
               </div>
 
-              <div className="flex items-center">
-                <input
-                  id="rememberMe"
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-default text-primary focus:ring-primary"
-                />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-default-600">
-                  Remember me
-                </label>
-              </div>
-            </div>
+              {error && (
+                <div className="rounded-md bg-red-50 p-4">
+                  <div className="text-sm text-red-700">{error}</div>
+                </div>
+              )}
 
-            <div>
-              <Button
-                type="submit"
-                color="primary"
-                className="w-full"
-                isLoading={isLoading}
-                isDisabled={isLoading}
-              >
-                Sign in
-              </Button>
-            </div>
-          </form>
+              {successMessage && (
+                <div className="rounded-md bg-green-50 p-4">
+                  <div className="text-sm text-green-700">{successMessage}</div>
+                </div>
+              )}
+
+              <div>
+                <Button
+                  type="submit"
+                  isLoading={isLoading}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Sign in
+                </Button>
+              </div>
+            </form>
+
+            {successMessage && successMessage.includes("not verified") && (
+              <div className="mt-6">
+                <Button
+                  type="button"
+                  variant="bordered"
+                  onClick={handleResendVerification}
+                  isLoading={isLoading}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Resend Verification Email
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

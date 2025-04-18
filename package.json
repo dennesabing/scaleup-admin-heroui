@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "node server.js --host=scaleup-admin.local --port=3000 --turbo",
+    "dev:https": "node server.js --host=scaleup-admin.local --port=3000 --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix",

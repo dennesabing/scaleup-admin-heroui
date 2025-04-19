@@ -31,6 +31,11 @@ const sidebarItems: SidebarItem[] = [
     icon: "ShoppingBag",
   },
   {
+    title: "Profile",
+    href: "/profile",
+    icon: "Users",
+  },
+  {
     title: "Settings",
     href: "/admin/settings",
     icon: "Settings",

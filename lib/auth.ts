@@ -6,12 +6,27 @@ export interface AuthModel {
   api_token?: string;
 }
 
+export interface UserProfile {
+  first_name?: string;
+  last_name?: string;
+  birthdate?: string;
+  gender?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  timezone?: string;
+  phone?: string;
+}
+
 export interface UserModel {
   id: number;
   email: string;
   name?: string;
   email_verified_at?: string | null;
   roles?: string[];
+  profile?: UserProfile;
 }
 
 export interface ApiError {

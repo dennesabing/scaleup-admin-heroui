@@ -22,7 +22,7 @@ export function redirectWithMessage(
   
   // Navigate to the target page without query parameters
   return options?.replace 
-    ? router.replace(path) 
+    ? router.push(path, undefined, { shallow: true }) 
     : router.push(path);
 }
 

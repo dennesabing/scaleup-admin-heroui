@@ -68,7 +68,7 @@ export default function Login() {
       delete query.message;
       
       // Use shallow routing to update the URL without full page reload
-      router.replace(
+      router.push(
         { pathname, query },
         undefined,
         { shallow: true }

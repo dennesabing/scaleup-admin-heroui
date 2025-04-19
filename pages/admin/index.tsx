@@ -59,7 +59,7 @@ export default function AdminDashboard() {
       const query = { ...router.query };
       delete query.message;
       
-      router.replace(
+      router.push(
         { pathname, query },
         undefined,
         { shallow: true }

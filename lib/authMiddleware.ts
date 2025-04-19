@@ -55,7 +55,7 @@ export function useAuth(options: UseAuthOptions = {}) {
         redirectWithMessage(router, redirectTo, redirectMessage, { replace: true });
       } else {
         // Store the current URL as returnUrl for after login (if no message)
-        router.replace({
+        router.push({
           pathname: redirectTo,
           query: { returnUrl: router.asPath }
         });

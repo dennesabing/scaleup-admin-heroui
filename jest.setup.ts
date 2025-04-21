@@ -34,6 +34,12 @@ global.fetch = jest.fn().mockImplementation(() =>
   })
 );
 
+// Mock dependencies that cause import issues
+jest.mock('react-dropzone', () => ({}), { virtual: true });
+jest.mock('react-easy-crop', () => ({}), { virtual: true });
+jest.mock('react-easy-crop/types', () => ({}), { virtual: true });
+jest.mock('@/utils/cropImage', () => ({}), { virtual: true });
+
 // Mock framer-motion to prevent dynamic import issues
 jest.mock('framer-motion', () => {
   const actual = jest.requireActual('framer-motion');
@@ -84,6 +90,16 @@ jest.mock('@heroui/button', () => {
         },
         isLoading ? 'Loading...' : children
       );
+    }
+  };
+});
+
+// Mock next/image
+jest.mock('next/image', () => {
+  return {
+    __esModule: true,
+    default: ({ src, alt, ...props }: any) => {
+      return React.createElement('img', { src, alt, ...props });
     }
   };
 });

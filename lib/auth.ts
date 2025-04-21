@@ -18,6 +18,7 @@ export interface UserProfile {
   country?: string;
   timezone?: string;
   phone?: string;
+  avatar_url?: string;
 }
 
 export interface UserModel {

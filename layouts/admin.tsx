@@ -31,8 +31,8 @@ const sidebarItems: SidebarItem[] = [
     icon: "ShoppingBag",
   },
   {
-    title: "Profile",
-    href: "/profile",
+    title: "Account",
+    href: "/account",
     icon: "Users",
   },
   {
@@ -59,7 +59,12 @@ export default function AdminLayout({
   
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<{ email: string; name: string; emailVerified: boolean } | null>(null);
+  const [user, setUser] = useState<{ 
+    email: string; 
+    name: string; 
+    emailVerified: boolean;
+    avatarUrl?: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // Load user data from API and update localStorage
@@ -75,7 +80,8 @@ export default function AdminLayout({
           setUser({
             email: currentUser.email,
             name: currentUser.name || currentUser.email,
-            emailVerified: !!currentUser.email_verified_at
+            emailVerified: !!currentUser.email_verified_at,
+            avatarUrl: currentUser.profile?.avatar_url
           });
         }
       } catch (error) {
@@ -86,6 +92,25 @@ export default function AdminLayout({
     };
     
     fetchUserData();
+    
+    // Listen for avatar updates
+    const handleAvatarUpdate = (event: CustomEvent<{ avatarUrl: string }>) => {
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          avatarUrl: event.detail.avatarUrl
+        };
+      });
+    };
+    
+    // Add event listener for avatar updates
+    window.addEventListener('user:avatar-updated', handleAvatarUpdate as EventListener);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('user:avatar-updated', handleAvatarUpdate as EventListener);
+    };
   }, []);
   
   // Handle logout
@@ -93,6 +118,9 @@ export default function AdminLayout({
     logout();
     router.push('/auth/login');
   };
+
+  // Get avatar source - use user's avatar if available, otherwise use Pravatar
+  const avatarSrc = user?.avatarUrl || `https://i.pravatar.cc/150?u=${user?.email || 'admin'}`;
 
   return (
     <div className="relative flex h-screen bg-content1">
@@ -149,8 +177,8 @@ export default function AdminLayout({
             <div className="flex items-center">
               <div className="relative inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
                 <img
-                  src="https://i.pravatar.cc/150?u=admin"
-                  alt="Admin User"
+                  src={avatarSrc}
+                  alt="User Avatar"
                   className="h-full w-full object-cover"
                 />
               </div>

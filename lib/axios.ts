@@ -1,4 +1,10 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
+import https from 'https';
+
+// Create https agent that ignores SSL certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 // Create axios instance with base configuration
 const axiosInstance = axios.create({
@@ -7,7 +13,8 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  timeout: 10000
+  timeout: 10000,
+  httpsAgent // Add the https agent to ignore certificate errors
 });
 
 // Add request interceptor to attach auth token

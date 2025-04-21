@@ -14,6 +14,7 @@ import {
   TimezoneOption,
   GenderOption
 } from "@/lib/constants";
+import AvatarUpload from "./AvatarUpload";
 
 interface ProfileSectionProps {
   user: UserModel;
@@ -166,12 +167,38 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
     }
   };
 
+  // Handle avatar upload success
+  const handleAvatarSuccess = (newAvatarUrl: string) => {
+    // Update the form state with the new avatar URL
+    setProfileForm((prev) => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        avatar_url: newAvatarUrl
+      }
+    }));
+    
+    // Show success message for the profile section
+    setSuccess("Avatar updated successfully");
+  };
+
   return (
     <div className="bg-background rounded-lg p-6">
       <h2 className="text-lg font-medium mb-4">Profile Information</h2>
       <p className="text-default-500 mb-4">
         Update your account profile information.
       </p>
+      
+      {/* Avatar Upload */}
+      <div className="mb-8">
+        <h3 className="text-md font-medium mb-4">Profile Photo</h3>
+        <AvatarUpload
+          avatarUrl={user.profile?.avatar_url}
+          onSuccess={handleAvatarSuccess}
+          onError={onError}
+          className="mb-2"
+        />
+      </div>
       
       <form onSubmit={handleSubmit}>
         <div className="space-y-8">

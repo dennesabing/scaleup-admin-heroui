@@ -1,12 +1,14 @@
 import React from 'react';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import DeleteAccountSection from '@/components/profile/DeleteAccountSection';
 import { deleteUserAccount } from '@/lib/userService';
 
 // Mock Next.js router
+const mockRouterPush = jest.fn();
 jest.mock('next/router', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockRouterPush,
   }),
 }));
 
@@ -28,42 +30,44 @@ describe('DeleteAccountSection', () => {
     jest.clearAllMocks();
   });
   
-  it('renders the initial delete account button', () => {
+  it('renders the initial delete account button', async () => {
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
-    expect(screen.getByText('Delete Account')).toBeInTheDocument();
-    expect(screen.queryByText('Permanently Delete Account')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Account' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Permanently Delete Account' })).not.toBeInTheDocument();
   });
   
-  it('shows the confirmation form when Delete Account button is clicked', () => {
+  it('shows the confirmation form when Delete Account button is clicked', async () => {
+    const user = userEvent.setup();
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
-    fireEvent.click(screen.getByText('Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
     
-    expect(screen.getByText('Permanently Delete Account')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Permanently Delete Account' })).toBeInTheDocument();
     expect(screen.getByLabelText('Confirm Your Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Your Password')).toBeInTheDocument();
     expect(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/)).toBeInTheDocument();
   });
   
   it('validates form inputs correctly', async () => {
+    const user = userEvent.setup();
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
     // Open the form
-    fireEvent.click(screen.getByText('Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
     
     const emailInput = screen.getByLabelText('Confirm Your Email');
     const passwordInput = screen.getByLabelText('Your Password');
     const confirmationInput = screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/);
-    const submitButton = screen.getByText('Permanently Delete Account');
+    const submitButton = screen.getByRole('button', { name: 'Permanently Delete Account' });
     
     // Initially the button should be disabled
     expect(submitButton).toBeDisabled();
     
     // Fill form with invalid data
-    fireEvent.change(emailInput, { target: { value: 'wrong@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
-    fireEvent.change(confirmationInput, { target: { value: 'delete' } });
+    await user.type(emailInput, 'wrong@example.com');
+    await user.type(passwordInput, 'password123');
+    await user.type(confirmationInput, 'delete');
     
     // Button should still be disabled
     expect(submitButton).toBeDisabled();
@@ -72,10 +76,11 @@ describe('DeleteAccountSection', () => {
     expect(screen.getByText('Please enter your exact email address')).toBeInTheDocument();
     expect(screen.getByText(/Please type "DELETE MY ACCOUNT" exactly/)).toBeInTheDocument();
     
-    // Fill form with valid data
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
-    fireEvent.change(confirmationInput, { target: { value: 'DELETE MY ACCOUNT' } });
+    // Clear fields and fill form with valid data
+    await user.clear(emailInput);
+    await user.type(emailInput, 'test@example.com');
+    await user.clear(confirmationInput);
+    await user.type(confirmationInput, 'DELETE MY ACCOUNT');
     
     // Button should be enabled
     expect(submitButton).not.toBeDisabled();
@@ -84,24 +89,19 @@ describe('DeleteAccountSection', () => {
   it('shows success modal when account is deleted successfully', async () => {
     (deleteUserAccount as jest.Mock).mockResolvedValueOnce(undefined);
     
+    const user = userEvent.setup();
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
     // Open the form
-    fireEvent.click(screen.getByText('Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
     
     // Fill form with valid data
-    fireEvent.change(screen.getByLabelText('Confirm Your Email'), { 
-      target: { value: 'test@example.com' } 
-    });
-    fireEvent.change(screen.getByLabelText('Your Password'), { 
-      target: { value: 'password123' } 
-    });
-    fireEvent.change(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/), { 
-      target: { value: 'DELETE MY ACCOUNT' } 
-    });
+    await user.type(screen.getByLabelText('Confirm Your Email'), 'test@example.com');
+    await user.type(screen.getByLabelText('Your Password'), 'password123');
+    await user.type(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/), 'DELETE MY ACCOUNT');
     
     // Submit the form
-    fireEvent.click(screen.getByText('Permanently Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Permanently Delete Account' }));
     
     await waitFor(() => {
       expect(deleteUserAccount).toHaveBeenCalledWith({
@@ -114,32 +114,56 @@ describe('DeleteAccountSection', () => {
       expect(screen.getByText('Account Deleted Successfully')).toBeInTheDocument();
       expect(screen.getByText(/Your account with email/)).toBeInTheDocument();
       expect(screen.getByText('test@example.com')).toBeInTheDocument();
-      expect(screen.getByText('Return to Login')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Return to Login' })).toBeInTheDocument();
     });
+  });
+  
+  it('redirects to login page when clicking button in success modal', async () => {
+    (deleteUserAccount as jest.Mock).mockResolvedValueOnce(undefined);
+    
+    const user = userEvent.setup();
+    render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
+    
+    // Open the form
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
+    
+    // Fill form with valid data
+    await user.type(screen.getByLabelText('Confirm Your Email'), 'test@example.com');
+    await user.type(screen.getByLabelText('Your Password'), 'password123');
+    await user.type(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/), 'DELETE MY ACCOUNT');
+    
+    // Submit the form
+    await user.click(screen.getByRole('button', { name: 'Permanently Delete Account' }));
+    
+    // Wait for success modal
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Return to Login' })).toBeInTheDocument();
+    });
+    
+    // Click on return to login button
+    await user.click(screen.getByRole('button', { name: 'Return to Login' }));
+    
+    // Check that router.push was called with login path
+    expect(mockRouterPush).toHaveBeenCalledWith('/auth/login');
   });
   
   it('handles errors when delete fails', async () => {
     const errorMessage = 'Invalid password';
     (deleteUserAccount as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
     
+    const user = userEvent.setup();
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
     // Open the form
-    fireEvent.click(screen.getByText('Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
     
     // Fill form with valid data
-    fireEvent.change(screen.getByLabelText('Confirm Your Email'), { 
-      target: { value: 'test@example.com' } 
-    });
-    fireEvent.change(screen.getByLabelText('Your Password'), { 
-      target: { value: 'password123' } 
-    });
-    fireEvent.change(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/), { 
-      target: { value: 'DELETE MY ACCOUNT' } 
-    });
+    await user.type(screen.getByLabelText('Confirm Your Email'), 'test@example.com');
+    await user.type(screen.getByLabelText('Your Password'), 'password123');
+    await user.type(screen.getByLabelText(/Type "DELETE MY ACCOUNT" exactly/), 'DELETE MY ACCOUNT');
     
     // Submit the form
-    fireEvent.click(screen.getByText('Permanently Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Permanently Delete Account' }));
     
     await waitFor(() => {
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
@@ -150,22 +174,21 @@ describe('DeleteAccountSection', () => {
     });
   });
   
-  it('allows cancelling the deletion process', () => {
+  it('allows cancelling the deletion process', async () => {
+    const user = userEvent.setup();
     render(<DeleteAccountSection user={mockUser} onError={mockOnError} />);
     
     // Open the form
-    fireEvent.click(screen.getByText('Delete Account'));
+    await user.click(screen.getByRole('button', { name: 'Delete Account' }));
     
     // Fill form with some data
-    fireEvent.change(screen.getByLabelText('Confirm Your Email'), { 
-      target: { value: 'test@example.com' } 
-    });
+    await user.type(screen.getByLabelText('Confirm Your Email'), 'test@example.com');
     
     // Click cancel
-    fireEvent.click(screen.getByText('Cancel'));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     
     // Form should be hidden again
     expect(screen.queryByLabelText('Confirm Your Email')).not.toBeInTheDocument();
-    expect(screen.getByText('Delete Account')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Account' })).toBeInTheDocument();
   });
 }); 

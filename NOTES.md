@@ -10,19 +10,19 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 - [x] Dashboard page
 - [x] Users page
   - [x] User profile update feat/user-profile-update
-  - [] update profile image
+  - [x] update profile image
   - [x] User password update
   - [x] User email update
   - [] user delete 
-- [ ] Connect to ScaleUp API endpoints
-- [ ] Authentication flows:
+- [x] Connect to ScaleUp API endpoints
+- [x] Authentication flows:
   - [x] Registration page
   - [x] Login page
   - [x] Forgot password flow v0.4.0 feat/forgot-password-flow
   - [x] Email verification v0.3.0/1
 - [x] Protected routes for authenticated users v0.3.0/1
-- [] remove messages carried over to the url address v0.4.1 fix/remove-messages-in-url
-- [] tests
+- [x] remove messages carried over to the url address v0.4.1 fix/remove-messages-in-url
+- [x] tests
     - [x] login form - chore/test-login v0.4.1
     - [x] register form
     - [x] forgot-password form

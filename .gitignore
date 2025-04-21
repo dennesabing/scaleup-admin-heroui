@@ -44,3 +44,5 @@ next-env.d.ts
 .vercel
 NOTES.md
 /certs/
+CHANGELOG-*.md
+!CHANGELOG.md

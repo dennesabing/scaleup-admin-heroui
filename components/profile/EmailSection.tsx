@@ -139,7 +139,7 @@ export function EmailSection({ user, onError, onEmailUpdate }: EmailSectionProps
   };
   
   return (
-    <div className="bg-background shadow rounded-lg p-6 mt-6">
+    <div className="bg-background rounded-lg p-6">
       <h2 className="text-lg font-medium mb-4">Update Email Address</h2>
       <p className="text-default-500 mb-4">
         Update your email address. A verification link will be sent to your new email.

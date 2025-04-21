@@ -91,7 +91,7 @@ export default function DeleteAccountSection({ user, onError }: DeleteAccountSec
 
   return (
     <>
-      <div className="bg-background shadow rounded-lg p-6 mt-6">
+      <div className="bg-background rounded-lg p-6">
         <h2 className="text-lg font-medium mb-4">Delete Account</h2>
         <p className="text-default-500 mb-4">
           Once your account is deleted, all of your resources and data will be permanently deleted. Before

@@ -1,5 +1,23 @@
 # CHANGELOG: Profile Improvements
 
+## Version 1.3.0 (Minor Release)
+
+### Added
+
+- **Tabbed UI for Profile Page**
+  - Created reusable `TabNavigation` component
+  - Redesigned profile page to organize sections into tabs:
+    - Profile Information
+    - Password
+    - Email
+    - Delete Account
+  - Added tests for tab navigation functionality
+
+### UI/UX Improvements
+  - Streamlined profile page layout with tab navigation
+  - Created consistent styling across all profile sections
+  - Improved navigation between different profile management functions
+
 ## Version 1.2.0 (Minor Release)
 
 ### Added

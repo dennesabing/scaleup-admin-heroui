@@ -167,7 +167,7 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
   };
 
   return (
-    <div className="bg-background shadow rounded-lg p-6">
+    <div className="bg-background rounded-lg p-6">
       <h2 className="text-lg font-medium mb-4">Profile Information</h2>
       <p className="text-default-500 mb-4">
         Update your account profile information.
@@ -177,6 +177,7 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
         <div className="space-y-8">
           {/* Personal Information Section */}
           <div className="border-b pb-5">
+            <h3 className="text-md font-medium mb-4">Personal Information</h3>
             <div className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium">

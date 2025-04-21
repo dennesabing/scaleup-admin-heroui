@@ -123,7 +123,7 @@ export default function PasswordSection({ onError }: PasswordSectionProps) {
   };
 
   return (
-    <div className="bg-background rounded-lg shadow p-6">
+    <div className="bg-background rounded-lg p-6">
       <h2 className="text-lg font-medium mb-4">Update Password</h2>
       <p className="text-default-500 mb-4">Ensure your account is using a secure password.</p>
 

@@ -119,8 +119,8 @@ export default function Login() {
         localStorage.removeItem("rememberedEmail");
       }
       
-      // Redirect to dashboard/admin page
-      router.push("/admin");
+      // Redirect to dashboard
+      router.push("/dashboard");
     } catch (err: unknown) {
       // Check if the error is due to unverified email
       const errorMessage = err instanceof Error ? err.message : '';

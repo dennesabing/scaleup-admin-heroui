@@ -37,9 +37,9 @@ export function useAuth(options: UseAuthOptions = {}) {
     // This is useful for pages like login that should redirect to dashboard if already logged in
     if (redirectIfFound && auth) {
       if (redirectMessage) {
-        redirectWithMessage(router, '/admin', redirectMessage);
+        redirectWithMessage(router, '/dashboard', redirectMessage);
       } else {
-        router.push('/admin');
+        router.push('/dashboard');
       }
       return;
     }

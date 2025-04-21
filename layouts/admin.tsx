@@ -17,17 +17,17 @@ interface SidebarItem {
 const sidebarItems: SidebarItem[] = [
   {
     title: "Dashboard",
-    href: "/admin",
+    href: "/dashboard",
     icon: "LayoutDashboard",
   },
   {
     title: "Users",
-    href: "/admin/users",
+    href: "/users",
     icon: "Users",
   },
   {
     title: "Products",
-    href: "/admin/products",
+    href: "/products",
     icon: "ShoppingBag",
   },
   {
@@ -37,7 +37,7 @@ const sidebarItems: SidebarItem[] = [
   },
   {
     title: "Settings",
-    href: "/admin/settings",
+    href: "/settings",
     icon: "Settings",
   },
 ];
@@ -105,8 +105,8 @@ export default function AdminLayout({
           border-r border-divider flex flex-col fixed left-0 top-0 bottom-0 z-30`}
       >
         <div className="p-4 flex justify-between items-center border-b border-divider">
-          <Link href="/admin" className={`${!sidebarOpen && "hidden"} text-xl font-bold text-primary`}>
-            Admin Panel
+          <Link href="/dashboard" className={`${!sidebarOpen && "hidden"} text-xl font-bold text-primary`}>
+            ScaleUp CRM
           </Link>
           <Button 
             isIconOnly 
@@ -122,7 +122,8 @@ export default function AdminLayout({
           <ul className="space-y-2 px-2">
             {sidebarItems.map((item) => {
               const Icon = IconComponents[item.icon];
-              const isActive = router.pathname === item.href;
+              const isActive = router.pathname === item.href || 
+                               (item.href !== '/dashboard' && router.pathname.startsWith(item.href));
               
               return (
                 <li key={item.href}>

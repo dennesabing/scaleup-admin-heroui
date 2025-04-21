@@ -5,6 +5,86 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 0.6.2 (Minor Release)
+
+### Added
+- **Tabbed UI for Profile Page**
+  - Created reusable `TabNavigation` component
+  - Redesigned profile page to organize sections into tabs:
+    - Profile Information
+    - Password
+    - Email
+    - Delete Account
+  - Added tests for tab navigation functionality
+
+### UI/UX Improvements
+  - Streamlined profile page layout with tab navigation
+  - Created consistent styling across all profile sections
+  - Improved navigation between different profile management functions
+
+## Version 0.6.1 (Minor Release)
+
+### Added
+- **Account Deletion Functionality**
+  - Created new `DeleteAccountSection` component for account deletion with enhanced security measures
+  - Implemented triple verification for account deletion (email, password, "DELETE MY ACCOUNT" confirmation)
+  - Added success modal with deleted account email and login page redirection
+  - Added comprehensive tests for the deletion functionality
+  - Updated API service to support the new deletion requirements
+
+- **Email Verification Improvements**
+  - Enhanced `EmailSection` component to refresh verification status after email update
+  - Added local state management for immediate feedback on verification status changes
+  - Implemented `onEmailUpdate` callback for parent component notification
+
+- **Password Management Enhancements**
+  - Added validation to ensure new password differs from current password
+  - Improved error messaging and validation feedback
+
+- **User Experience Improvements**
+  - Added form reset after successful submissions
+  - Enhanced error handling and messaging
+  - Improved responsive design for all profile sections
+  - Added visibility toggles for password fields
+  - Added confirmation modals for critical actions
+
+### Technical Improvements
+- Added proper validation in form submission handlers
+- Improved state management across profile components
+- Enhanced test coverage for new functionality
+- Improved API error handling 
+
+## [0.6.0]
+This release adds comprehensive user profile management functionality, allowing users to update their profile information, change passwords, update email addresses, and delete their accounts.
+
+### Added
+- New user profile page with four major sections:
+  - Profile information management
+  - Password updates
+  - Email address updates
+  - Account deletion
+- Created `userService.ts` with API services for user profile management:
+  - `updateUserProfile()` - Update basic user information (name)
+  - `updateUserPassword()` - Update user password with current password verification
+  - `updateUserEmail()` - Change email address with verification process
+  - `deleteUserAccount()` - Permanently delete user account
+  - `resendUserVerificationEmail()` - Resend verification email
+- Added email verification status indicator with ability to resend verification emails
+- Implemented user-friendly success and error messaging for all operations
+- Added tests for profile page rendering and functionality verification
+
+### Technical Details
+- API endpoints used:
+  - `PUT /me/profile` - Update profile information
+  - `PUT /me/password` - Update password
+  - `PUT /me/email` - Update email address
+  - `POST /me/delete` - Delete account
+  - Reused existing verification email functionality
+- Ensures consistent error handling across all form submissions
+- Provides appropriate loading states for all operations
+- Includes confirmation requirements for dangerous operations (password + typing "DELETE" for account deletion)
+- All forms include appropriate client-side validation 
+
 ## [0.5.0] - 2025-04-17
 
 ### Added

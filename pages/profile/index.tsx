@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import { useAuth } from "@/lib/authMiddleware";
-import { getCurrentUser, UserModel } from "@/lib/auth";
+import { getCurrentUser, UserModel, getUser } from "@/lib/auth";
 import useApiError from "@/hooks/useApiError";
 import AdminLayout from "@/layouts/admin";
 import { 
@@ -24,7 +24,17 @@ export default function ProfilePage() {
     email_verified_at: null,
   });
   
-  // Fetch user data
+  // Refresh user data
+  const refreshUser = useCallback(async () => {
+    try {
+      const updatedUser = await getUser();
+      setUser(updatedUser);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+  
+  // Fetch user data on mount
   useEffect(() => {
     const currentUser = getCurrentUser();
     if (currentUser) {
@@ -65,10 +75,12 @@ export default function ProfilePage() {
         <EmailSection
           user={user}
           onError={handleComponentError}
+          onEmailUpdate={refreshUser}
         />
         
         {/* Delete Account */}
         <DeleteAccountSection
+          user={user}
           onError={handleComponentError}
         />
         

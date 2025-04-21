@@ -87,11 +87,15 @@ export const updateUserEmail = async (data: {
 
 /**
  * Delete user account
- * @param password Current password for confirmation
+ * @param data Account deletion confirmation data
  */
-export const deleteUserAccount = async (password: string): Promise<void> => {
+export const deleteUserAccount = async (data: {
+  email: string;
+  password: string;
+  confirmation: string;
+}): Promise<void> => {
   try {
-    await axiosInstance.post(USER_ENDPOINTS.DELETE, { password });
+    await axiosInstance.post(USER_ENDPOINTS.DELETE, data);
     
     // Log out the user
     logout();

@@ -1,4 +1,4 @@
-## [0.6.2] - Minor Release  2025-04-21
+## [0.6.3] - Minor Release  2025-04-21
 
 ## Flat URLs Structure
 

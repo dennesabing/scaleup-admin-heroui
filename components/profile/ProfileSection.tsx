@@ -428,7 +428,7 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
           <div className="flex justify-end">
             <Button
               type="submit"
-              color={hasChanges ? "success" : "primary"}
+              color={hasChanges ? "success" : "default"}
               isLoading={isLoading}
               disabled={isLoading || !hasChanges}
               className="ml-3"

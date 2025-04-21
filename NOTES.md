@@ -6,12 +6,13 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 
 - [x] Initial project setup with Next.js and HeroUI
 - [x] Admin layout with sidebar
+  - [] admin uri prefix with "admin" or remove the "admin"
 - [x] Dashboard page
 - [x] Users page
-  - [] User profile update
+  - [x] User profile update feat/user-profile-update
   - [] update profile image
-  - [] User password update
-  - [] User email update
+  - [x] User password update
+  - [x] User email update
   - [] user delete 
 - [ ] Connect to ScaleUp API endpoints
 - [ ] Authentication flows:
@@ -30,8 +31,9 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 - [] implement http-only rather than saving to the local storage feat/
 - [x] forgot password
   - [x] even if email is not found, just display a success message.
-    - modify the success message to check email address if account is found.
-    - if email address is found, then we sent an a password link to
+  - [x] modify the success message to check email address if account is found.
+  - [x] if email address is found, then we sent an a password link to
+  - [x] add show/hide password 
 
 ## Phase 2: Core CRM Features
 

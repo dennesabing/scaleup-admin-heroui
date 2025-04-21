@@ -6,7 +6,7 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 
 - [x] Initial project setup with Next.js and HeroUI
 - [x] Admin layout with sidebar
-  - [] admin uri prefix with "admin" or remove the "admin"
+  - [x] admin uri prefix with "admin" or remove the "admin"
 - [x] Dashboard page
 - [x] Users page
   - [x] User profile update feat/user-profile-update

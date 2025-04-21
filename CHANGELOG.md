@@ -1,3 +1,33 @@
+## [0.6.2] - Minor Release  2025-04-21
+
+## Flat URLs Structure
+
+### Changed
+- **Routes**: Removed `dashboard` or `admin` prefix from routes for even cleaner URLs
+  - `/admin/users` → `/users` 
+  - `/admin/settings` → `/settings`
+  - Keep `/dashboard` as the main dashboard page
+
+### Added
+- Added new root-level pages:
+  - `/users.tsx` - User management
+  - `/settings.tsx` - Application settings
+  - Maintained `/dashboard.tsx` as the main dashboard
+
+### Updated
+- Updated `layouts/admin.tsx` to use new route paths
+  - Modified sidebar navigation links to point to root-level routes
+  - Updated active link detection logic
+- All redirects and navigation links now use the new URL structure
+- Maintained backward compatibility for links to `/dashboard`
+
+### Pending
+- Additional tests will need to be updated to reflect the new routing structure
+- Other admin-related functionality (products, etc.) should use the flat URL structure 
+
+## Migration Guide
+No database changes are required. This is purely a UI/routing change. All internal links have been updated to use the new flat URL structure, improving the user experience with cleaner and more intuitive URLs. 
+
 ## Version 0.6.2 (Minor Release)
 
 ### Added

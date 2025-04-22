@@ -9,6 +9,8 @@ import { HeroUIProvider } from "@heroui/system";
 
 import { fontSans, fontMono } from "@/config/fonts";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { TeamProvider } from "@/contexts/TeamContext";
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -49,7 +51,11 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider>
         <ErrorBoundary>
-          {getLayout(<Component {...pageProps} />)}
+          <OrganizationProvider>
+            <TeamProvider>
+              {getLayout(<Component {...pageProps} />)}
+            </TeamProvider>
+          </OrganizationProvider>
         </ErrorBoundary>
       </NextThemesProvider>
     </HeroUIProvider>

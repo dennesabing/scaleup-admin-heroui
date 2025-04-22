@@ -1,0 +1,201 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Frontend Implementation Guidelines for Organization & Team Management
+
+## Overview
+These guidelines cover the frontend implementation of the Organization and Team Management features using React and Next.js. This system allows users to manage organizations, teams, and user memberships through an intuitive interface that reflects the hierarchical structure of organizations containing teams and users.
+
+## Directory Structure
+
+```
+/
+├── pages/
+│   ├── organizations/               # Organization-related pages
+│   │   ├── index.js                 # List organizations
+│   │   ├── [id]/                    # Organization detail routes
+│   │   │   ├── index.js             # Organization dashboard
+│   │   │   ├── settings.js          # Organization settings
+│   │   │   ├── members.js           # Organization me teams/               # Organization teams management
+│   │   │       ├── index.js         # List teams
+│   │   │       └── [teamId].js      # Team details
+│   ├── teams/                       # Team-related pages
+│   │   ├── index.js                 # List user's teams
+│   │   └── [id]/                    # Team detail routes
+│   │       ├── index.js             # Team dashboard
+│   │       ├── settings.js          # Team settings
+│   │       └── members.js           # Team members management
+│   └── invitations/                 # Handle invitations
+│       └── [token].js               # Accept invitation page
+├── components/
+│   ├── organizations/               # Organization-specific components
+│   └── teams/                       # Team-specific components
+├── contexts/
+│   ├── OrganizationContext.js       # Current organization context
+│   └── TeamContext.js               # Current team context
+├── hooks/
+│   ├── useOrganization.js           # Organization-related hooks
+│   └── useTeam.js                   # Team-related hooks
+├── services/
+│   ├── organizationService.js       # Organization API service
+│   └── teamService.js               # Team API service
+├── utils/
+│   ├── permissions.js               # Permission utilities
+│   └── constants.js                 # Constants used across the app
+```
+
+## Core Features
+
+### User Interface Components
+
+#### Organization Management
+- Organization switcher (dropdown in header/sidebar)
+- Organization creation form
+- Organization settings page
+- Organization members management
+- Organization teams overview
+- Organization invitation management
+
+#### Team Management
+- Team creation form
+- Team details page
+- Team settings
+- Team members management
+- Team resources (contacts, etc.)
+
+#### User Management
+- User profile settings
+- Role assignment interface
+- Permission visualization
+
+#### Authentication Context
+- Permission checking
+
+#### Organization Context
+- Current organization data
+- Organization switching
+- Organization-level permissions
+
+#### Team Context
+- Current team data
+- Team switching
+- Team-level permissions
+
+## Implementation Guidelines
+
+### Authentication and Authorization
+- Check permissions before rendering sensitive UI components
+- Implement role-based access control on the frontend
+
+### API Integration
+- Implement proper error handling for API requests
+- Use TypeScript interfaces for API response types
+- Create separate service modules for different resource types
+
+### Navigation and Routing
+- Use Next.js dynamic routes for organization and team pages
+- Ensure proper access control at the route level
+
+### Component Design
+- Create reusable components for common patterns
+- Implement proper loading and error states
+- Use skeleton loaders for better UX during data fetching
+- Design responsive layouts that work on all device sizes
+
+### Performance Optimization
+- Optimize component rendering with React.memo and useMemo
+- Implement proper data caching strategies
+- Use Next.js features like SSR and ISR where appropriate
+- Optimize bundle size with code splitting
+
+## User Experience Guidelines
+
+### Organization Switching
+- Provide a persistent organization switcher in the header/sidebar
+- Show visual indicators for the current organization context
+- Save the last selected organization in local storage
+
+### Team Switching
+- Allow quick switching between teams within an organization
+- Show visual indicators for the current team context
+- Implement breadcrumb navigation to show hierarchy
+
+### Invitations and Onboarding
+- Design intuitive invitation acceptance flows
+- Implement proper feedback for invitation status
+- Create guided onboarding for new organization and team creation
+
+### Permissions Visualization
+- Show/hide UI elements based on user permissions
+- Provide clear feedback when permission is denied
+- Implement permission-aware navigation
+
+## Implementation Phases
+1. Authentication and core organization structure
+2. Organization management and switching
+3. Team management within organizations
+4. User management and roles
+5. Invitation and onboarding flows
+6. Advanced features and optimizations
+
+## Testing Guidelines
+- Implement unit tests for utilities and hooks
+- Create component tests with React Testing Library
+- Implement integration tests for complex workflows
+- Use Cypress for end-to-end testing
+
+## Best Practices
+- Follow React best practices for component design
+- Use proper React Hooks for stateful logic
+- Implement proper TypeScript typing
+- Ensure responsive design for all screen sizes
+- Follow accessibility guidelines (WCAG 2.1)
+- Use consistent error handling and loading states
+- Implement comprehensive test coverage 
+
+## API Endpoints
+
+### Organization Management
+- `GET /api/organizations` - List user's organizations
+- `POST /api/organizations` - Create new organization
+- `GET /api/organizations/{id}` - Get organization details
+- `PUT /api/organizations/{id}` - Update organization details
+- `DELETE /api/organizations/{id}` - Delete organization
+
+### Organization Attributes
+- `GET /api/organizations/{id}/attributes` - List organization's attributes
+- `POST /api/organizations/{id}/attributes` - Create new attributes for organization
+- `PUT /api/organizations/{id}/attributes/{attribute}` - Update specifif attribute for organization
+- `DELETE /api/organizations/{id}/attributes/{attribute}` - Delete organization attribute
+- `DELETE /api/organizations/{id}/attributes` - Delete organization all attributes
+
+### Organization Membership
+- `GET /api/organizations/{id}/members` - List organization members
+- `POST /api/organizations/{id}/members` - Add member to organization
+- `PUT /api/organizations/{id}/members/{userId}` - Update member role
+- `DELETE /api/organizations/{id}/members/{userId}` - Remove member from organization
+
+### Organization Teams
+- `GET /api/organizations/{id}/teams` - List organization teams
+- `POST /api/organizations/{id}/teams` - Create new team in organization
+- `GET /api/organizations/{id}/teams/{teamId}` - Get team details
+- `PUT /api/organizations/{id}/teams/{teamId}` - Update team
+- `DELETE /api/organizations/{id}/teams/{teamId}` - Delete team
+
+### Organization Users
+- `GET /api/organizations/{id}/users` - List organization users
+- `POST /api/organizations/{id}/users` - Create new user in organization
+- `GET /api/organizations/{id}/users/{userId}` - Get user details
+- `PUT /api/organizations/{id}/users/{userId}` - Update user
+- `DELETE /api/organizations/{id}/users/{userId}` - Delete user
+
+### Organization Invitations
+- `POST /api/organizations/{id}/invitations` - Create invitation
+- `GET /api/organization-invitations/{token}` - View invitation details
+- `POST /api/organization-invitations/{token}/accept` - Accept invitation
+- `DELETE /api/organizations/{id}/invitations/{invitationId}` - Cancel invitation
+
+
+

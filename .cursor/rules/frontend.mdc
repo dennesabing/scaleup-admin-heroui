@@ -1,6 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
 alwaysApply: true
 ---
 ---
@@ -72,4 +77,16 @@ NOTES.md
 UserModel
 - always refer to @UserResource.php for the UserModel insterface
 - for UserModel.profile, it's dynamic key-value rows save as @UserAttribute.php
+
+
+## Best Practices
+- Follow React best practices for component design
+- Use proper React Hooks for stateful logic
+- Implement proper TypeScript typing
+- Ensure responsive design for all screen sizes
+- Follow accessibility guidelines (WCAG 2.1)
+- Use consistent error handling and loading states
+- Implement comprehensive test coverage 
+
+
 

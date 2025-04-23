@@ -49,7 +49,7 @@ describe('OrganizationSwitcher', () => {
     });
 
     render(<OrganizationSwitcher />);
-    expect(screen.getByText('Loading')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('renders organization list when data is loaded', () => {
@@ -64,8 +64,9 @@ describe('OrganizationSwitcher', () => {
 
     render(<OrganizationSwitcher />);
     
-    // Initially the dropdown should show the current organization
-    expect(screen.getByText('Organization 1')).toBeInTheDocument();
+    // Initially the dropdown should show the current organization in the button trigger
+    const triggerButton = screen.getByTestId('mock-button');
+    expect(triggerButton).toHaveTextContent('Organization 1');
   });
 
   it('changes organization when clicked', async () => {
@@ -83,12 +84,12 @@ describe('OrganizationSwitcher', () => {
     render(<OrganizationSwitcher />);
     
     // Open dropdown
-    const trigger = screen.getByText('Organization 1');
-    fireEvent.click(trigger);
+    const triggerButton = screen.getByTestId('mock-button');
+    fireEvent.click(triggerButton);
     
     // The menu should be visible with all organizations
     await waitFor(() => {
-      const option = screen.getByText('Organization 2');
+      const option = screen.getAllByText('Organization 2')[0];
       expect(option).toBeInTheDocument();
       fireEvent.click(option);
     });
@@ -117,12 +118,12 @@ describe('OrganizationSwitcher', () => {
     render(<OrganizationSwitcher />);
     
     // Open dropdown
-    const trigger = screen.getByText('Organization 1');
-    fireEvent.click(trigger);
+    const triggerButton = screen.getByTestId('mock-button');
+    fireEvent.click(triggerButton);
     
     // Click on the second organization
     await waitFor(() => {
-      const option = screen.getByText('Organization 2');
+      const option = screen.getAllByText('Organization 2')[0];
       expect(option).toBeInTheDocument();
       fireEvent.click(option);
     });
@@ -144,8 +145,8 @@ describe('OrganizationSwitcher', () => {
     render(<OrganizationSwitcher />);
     
     // Open dropdown
-    const trigger = screen.getByText('Organization 1');
-    fireEvent.click(trigger);
+    const triggerButton = screen.getByTestId('mock-button');
+    fireEvent.click(triggerButton);
     
     // Click on the create organization option
     await waitFor(() => {

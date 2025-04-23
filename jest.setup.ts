@@ -40,6 +40,93 @@ jest.mock('react-easy-crop', () => ({}), { virtual: true });
 jest.mock('react-easy-crop/types', () => ({}), { virtual: true });
 jest.mock('@/utils/cropImage', () => ({}), { virtual: true });
 
+// Mock HeroUI components
+jest.mock('@heroui/button', () => {
+  return {
+    Button: ({ 
+      children, 
+      onClick, 
+      type = 'button', 
+      disabled = false,
+      isLoading = false,
+      color = 'primary',
+      variant = 'solid',
+      size = 'md',
+      className = '',
+      startContent,
+      ...props 
+    }: any) => {
+      return React.createElement(
+        'button',
+        { 
+          onClick, 
+          type, 
+          disabled: disabled || isLoading,
+          className: `mock-button mock-button-${color} mock-button-${variant} mock-button-${size} ${className}`,
+          "data-testid": "mock-button",
+          ...props 
+        },
+        startContent && React.createElement('span', { className: 'start-content' }, startContent),
+        isLoading ? 'Loading...' : children
+      );
+    }
+  };
+}, { virtual: true });
+
+jest.mock('@heroui/dropdown', () => {
+  return {
+    Dropdown: ({ children }: any) => React.createElement('div', { className: 'mock-dropdown' }, children),
+    DropdownTrigger: ({ children }: any) => React.createElement('div', { className: 'mock-dropdown-trigger' }, children),
+    DropdownMenu: ({ children, 'aria-label': ariaLabel }: any) => 
+      React.createElement('div', { className: 'mock-dropdown-menu', 'aria-label': ariaLabel }, children),
+    DropdownItem: ({ children, onClick, startContent, className = '' }: any) => 
+      React.createElement(
+        'div', 
+        { 
+          onClick, 
+          className: `mock-dropdown-item ${className}`, 
+          role: 'button', 
+          tabIndex: 0 
+        }, 
+        startContent && React.createElement('span', { className: 'start-content' }, startContent),
+        children
+      ),
+  };
+}, { virtual: true });
+
+jest.mock('@heroui/avatar', () => {
+  return {
+    Avatar: ({ src, alt, classNames = {} }: any) => 
+      React.createElement('img', { 
+        src, 
+        alt, 
+        className: `mock-avatar ${classNames.base || ''}`,
+      }),
+  };
+}, { virtual: true });
+
+// Mock @heroui/card
+jest.mock('@heroui/card', () => {
+  return {
+    Card: ({ children, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-card ${className}`, ...props }, children),
+    CardHeader: ({ children, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-card-header ${className}`, ...props }, children),
+    CardBody: ({ children, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-card-body ${className}`, ...props }, children),
+    CardFooter: ({ children, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-card-footer ${className}`, ...props }, children),
+  };
+}, { virtual: true });
+
+// Mock @heroui/divider
+jest.mock('@heroui/divider', () => {
+  return {
+    Divider: ({ className = '', ...props }: any) => 
+      React.createElement('hr', { className: `mock-divider ${className}`, ...props }),
+  };
+}, { virtual: true });
+
 // Mock framer-motion to prevent dynamic import issues
 jest.mock('framer-motion', () => {
   const actual = jest.requireActual('framer-motion');
@@ -60,37 +147,6 @@ jest.mock('framer-motion', () => {
 jest.mock('@heroui/ripple', () => {
   return {
     useRipple: () => ({ ripples: null, onClick: jest.fn() }),
-  };
-});
-
-// Mock the HeroUI Button component that's causing issues in tests
-jest.mock('@heroui/button', () => {
-  return {
-    Button: ({ 
-      children, 
-      onClick, 
-      type = 'button', 
-      disabled = false,
-      isLoading = false,
-      color = 'primary',
-      variant = 'solid',
-      size = 'md',
-      className = '',
-      ...props 
-    }: any) => {
-      return React.createElement(
-        'button',
-        { 
-          onClick, 
-          type, 
-          disabled: disabled || isLoading,
-          className: `mock-button mock-button-${color} mock-button-${variant} mock-button-${size} ${className}`,
-          "data-testid": "mock-button",
-          ...props 
-        },
-        isLoading ? 'Loading...' : children
-      );
-    }
   };
 });
 
@@ -181,6 +237,7 @@ jest.mock('@heroui/navbar', () => {
   };
 });
 
+// Add mock for @heroui/listbox
 jest.mock('@heroui/listbox', () => {
   return {
     Listbox: ({ children, ...props }: any) => React.createElement('div', props, children),

@@ -8,7 +8,7 @@ import { PlusIcon, BuildingIcon } from '@/components/icons';
 import { useAuth } from '@/lib/authMiddleware';
 
 export default function OrganizationsPage() {
-  const { organizations, isLoading, error, refreshOrganizations } = useOrganization();
+  const { organizations, isLoading, error } = useOrganization();
   const router = useRouter();
   
   // Protect this route
@@ -63,15 +63,7 @@ export default function OrganizationsPage() {
             <Card key={org.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  {org.logo_url ? (
-                    <img 
-                      src={org.logo_url} 
-                      alt={org.name} 
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <BuildingIcon size={24} className="text-default-500" />
-                  )}
+                  <BuildingIcon size={24} className="text-default-500" />
                   <h3 className="text-lg font-semibold">{org.name}</h3>
                 </div>
               </CardHeader>

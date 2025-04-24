@@ -37,6 +37,10 @@ This document outlines the development plan for the ScaleUp Admin CRM applicatio
 
 ## Phase 2: Core CRM Features
 
+- [ ] Organization
+  - [ ] launch the modal to for add organization flow during onboarding process
+  - [ ] flow to add new team and team members
+
 - [ ] Customer Management
   - [ ] Customer listing with search and filters
   - [ ] Customer details view

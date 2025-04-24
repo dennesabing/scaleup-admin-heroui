@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Textarea } from "@heroui/input";
@@ -6,9 +6,17 @@ import { Divider } from "@heroui/divider";
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/authMiddleware';
-import { getOrganization, updateOrganization, deleteOrganization } from '@/lib/services/organizationService';
+import { 
+  getOrganization, 
+  updateOrganization, 
+  deleteOrganization,
+  getOrganizationAttributes,
+  createOrganizationAttributes,
+  updateOrganizationAttribute,
+  deleteOrganizationAttribute
+} from '@/lib/services/organizationService';
 import { OrganizationModel } from '@/types/organization';
-import { BuildingIcon } from '@/components/icons';
+import { BuildingIcon, PlusIcon, Trash } from '@/components/icons';
 
 export default function OrganizationSettingsPage() {
   const [organization, setOrganization] = useState<OrganizationModel | null>(null);
@@ -20,6 +28,19 @@ export default function OrganizationSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
+  // Attributes state
+  const [attributes, setAttributes] = useState<Record<string, any>>({});
+  const [newAttributeKey, setNewAttributeKey] = useState('');
+  const [newAttributeValue, setNewAttributeValue] = useState('');
+  const [isLoadingAttributes, setIsLoadingAttributes] = useState(false);
+  const [attributesError, setAttributesError] = useState<string | null>(null);
+  const [attributesSuccess, setAttributesSuccess] = useState<string | null>(null);
+  
+  // Refs to prevent duplicate API calls
+  const isLoadingOrgRef = useRef(false);
+  const isLoadingAttributesRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
+  
   const router = useRouter();
   const { id } = router.query;
   
@@ -29,10 +50,17 @@ export default function OrganizationSettingsPage() {
   
   // Load organization data
   useEffect(() => {
+    // Skip if no id or if we're already loading
+    if (!id || typeof id !== 'string' || isLoadingOrgRef.current) return;
+    
+    // For subsequent id changes, we should always load
+    if (initialLoadDoneRef.current && organization?.id === parseInt(id)) {
+      return;
+    }
+    
     const loadOrganization = async () => {
-      if (!id || typeof id !== 'string') return;
-      
       try {
+        isLoadingOrgRef.current = true;
         setIsLoading(true);
         setError(null);
         
@@ -43,16 +71,41 @@ export default function OrganizationSettingsPage() {
         
         // Set this as the current organization
         setCurrentOrganizationId(orgData.id);
+        
+        // Load attributes
+        await loadAttributes(id);
+        initialLoadDoneRef.current = true;
       } catch (err) {
         console.error('Failed to load organization:', err);
         setError('Failed to load organization details. Please try again.');
       } finally {
         setIsLoading(false);
+        isLoadingOrgRef.current = false;
       }
     };
     
     loadOrganization();
-  }, [id, setCurrentOrganizationId]);
+  }, [id, setCurrentOrganizationId, organization]);
+  
+  const loadAttributes = async (organizationId: string | number) => {
+    // Skip if already loading attributes
+    if (isLoadingAttributesRef.current) return;
+    
+    try {
+      isLoadingAttributesRef.current = true;
+      setIsLoadingAttributes(true);
+      setAttributesError(null);
+      
+      const attributesData = await getOrganizationAttributes(organizationId);
+      setAttributes(attributesData || {});
+    } catch (err) {
+      console.error('Failed to load organization attributes:', err);
+      setAttributesError('Failed to load organization attributes. Please try again.');
+    } finally {
+      setIsLoadingAttributes(false);
+      isLoadingAttributesRef.current = false;
+    }
+  };
   
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +156,81 @@ export default function OrganizationSettingsPage() {
       console.error('Failed to delete organization:', err);
       setError('Failed to delete organization. Please try again.');
       setIsDeleting(false);
+    }
+  };
+  
+  const handleAddAttribute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!id || typeof id !== 'string') return;
+    if (!newAttributeKey.trim()) {
+      setAttributesError('Attribute key is required');
+      return;
+    }
+    
+    try {
+      setAttributesError(null);
+      setAttributesSuccess(null);
+      
+      // Create a new attribute object with the new key-value pair
+      const updatedAttributes = {
+        ...attributes,
+        [newAttributeKey]: newAttributeValue
+      };
+      
+      await createOrganizationAttributes(id, updatedAttributes);
+      
+      // Update local state
+      setAttributes(updatedAttributes);
+      setNewAttributeKey('');
+      setNewAttributeValue('');
+      setAttributesSuccess('Attribute added successfully');
+    } catch (err) {
+      console.error('Failed to add attribute:', err);
+      setAttributesError('Failed to add attribute. Please try again.');
+    }
+  };
+  
+  const handleUpdateAttribute = async (key: string, value: any) => {
+    if (!id || typeof id !== 'string') return;
+    
+    try {
+      setAttributesError(null);
+      setAttributesSuccess(null);
+      
+      await updateOrganizationAttribute(id, key, value);
+      
+      // Update local state
+      setAttributes({
+        ...attributes,
+        [key]: value
+      });
+      
+      setAttributesSuccess('Attribute updated successfully');
+    } catch (err) {
+      console.error('Failed to update attribute:', err);
+      setAttributesError('Failed to update attribute. Please try again.');
+    }
+  };
+  
+  const handleDeleteAttribute = async (key: string) => {
+    if (!id || typeof id !== 'string') return;
+    
+    try {
+      setAttributesError(null);
+      setAttributesSuccess(null);
+      
+      await deleteOrganizationAttribute(id, key);
+      
+      // Update local state
+      const newAttributes = { ...attributes };
+      delete newAttributes[key];
+      setAttributes(newAttributes);
+      
+      setAttributesSuccess('Attribute deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete attribute:', err);
+      setAttributesError('Failed to delete attribute. Please try again.');
     }
   };
 
@@ -192,6 +320,94 @@ export default function OrganizationSettingsPage() {
             </div>
           </div>
         </form>
+      </div>
+      
+      {/* Organization Attributes Section */}
+      <div className="bg-default-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold mb-4">Custom Attributes</h2>
+        <p className="text-default-500 mb-4">
+          Add custom attributes to your organization to store additional information.
+        </p>
+        
+        {attributesError && (
+          <div className="bg-danger-100 text-danger p-4 rounded-lg mb-6">
+            {attributesError}
+          </div>
+        )}
+        
+        {attributesSuccess && (
+          <div className="bg-success-100 text-success p-4 rounded-lg mb-6">
+            {attributesSuccess}
+          </div>
+        )}
+        
+        {isLoadingAttributes ? (
+          <div className="flex justify-center items-center h-24">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <>
+            {/* Current Attributes */}
+            {Object.keys(attributes).length > 0 ? (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3">Current Attributes</h3>
+                <div className="space-y-3">
+                  {Object.entries(attributes).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-3 p-3 bg-default-100 rounded-lg">
+                      <div className="flex-grow">
+                        <p className="font-medium">{key}</p>
+                        <p className="text-default-500">{String(value)}</p>
+                      </div>
+                      <Button
+                        color="danger"
+                        variant="light"
+                        isIconOnly
+                        onClick={() => handleDeleteAttribute(key)}
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-default-500 italic mb-6">No attributes defined yet.</div>
+            )}
+            
+            {/* Add New Attribute Form */}
+            <div>
+              <h3 className="text-lg font-medium mb-3">Add New Attribute</h3>
+              <form onSubmit={handleAddAttribute} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Attribute Key"
+                    placeholder="Enter key"
+                    value={newAttributeKey}
+                    onChange={(e) => setNewAttributeKey(e.target.value)}
+                    isRequired
+                    fullWidth
+                  />
+                  <Input
+                    label="Attribute Value"
+                    placeholder="Enter value"
+                    value={newAttributeValue}
+                    onChange={(e) => setNewAttributeValue(e.target.value)}
+                    fullWidth
+                  />
+                </div>
+                <div>
+                  <Button
+                    type="submit"
+                    color="primary"
+                    startContent={<PlusIcon size={16} />}
+                  >
+                    Add Attribute
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </>
+        )}
       </div>
       
       <div className="bg-danger-50 p-6 rounded-lg">

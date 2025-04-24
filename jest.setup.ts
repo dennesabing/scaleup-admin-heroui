@@ -127,6 +127,70 @@ jest.mock('@heroui/divider', () => {
   };
 }, { virtual: true });
 
+// Mock @heroui/tabs
+jest.mock('@heroui/tabs', () => {
+  return {
+    Tabs: ({ children, selectedKey, onSelectionChange, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-tabs ${className}`, ...props }, children),
+    Tab: ({ children, key, title, className = '', ...props }: any) => 
+      React.createElement('div', { className: `mock-tab ${className}`, 'data-key': key, ...props }, children),
+  };
+}, { virtual: true });
+
+// Mock @heroui/table
+jest.mock('@heroui/table', () => {
+  return {
+    Table: ({ children, className = '', ...props }: any) => 
+      React.createElement('table', { className: `mock-table ${className}`, ...props }, children),
+    TableHeader: ({ children, className = '', ...props }: any) => 
+      React.createElement('thead', { className: `mock-table-header ${className}`, ...props }, children),
+    TableColumn: ({ children, className = '', ...props }: any) => 
+      React.createElement('th', { className: `mock-table-column ${className}`, ...props }, children),
+    TableBody: ({ children, className = '', ...props }: any) => 
+      React.createElement('tbody', { className: `mock-table-body ${className}`, ...props }, children),
+    TableRow: ({ children, className = '', ...props }: any) => 
+      React.createElement('tr', { className: `mock-table-row ${className}`, ...props }, children),
+    TableCell: ({ children, className = '', ...props }: any) => 
+      React.createElement('td', { className: `mock-table-cell ${className}`, ...props }, children),
+  };
+}, { virtual: true });
+
+// Mock @heroui/link
+jest.mock('@heroui/link', () => {
+  return {
+    Link: ({ children, href, className = '', ...props }: any) => 
+      React.createElement('a', { href, className: `mock-link ${className}`, ...props }, children),
+    link: { base: 'mock-link-base' },
+  };
+}, { virtual: true });
+
+// Mock @heroui/kbd
+jest.mock('@heroui/kbd', () => {
+  return {
+    Kbd: ({ children, className = '', ...props }: any) => 
+      React.createElement('span', { className: `mock-kbd ${className}`, ...props }, children),
+  };
+}, { virtual: true });
+
+// Mock @heroui/system
+jest.mock('@heroui/system', () => {
+  return {
+    HeroUIProvider: ({ children, theme, ...props }: any) => 
+      React.createElement('div', { className: 'mock-heroui-provider', ...props }, children),
+  };
+}, { virtual: true });
+
+// Mock @heroui/theme
+jest.mock('@heroui/theme', () => {
+  return {
+    heroui: { 
+      themes: { light: {}, dark: {} },
+      defaultTheme: 'light',
+    },
+    link: { base: 'mock-link-base-style' },
+  };
+}, { virtual: true });
+
 // Mock framer-motion to prevent dynamic import issues
 jest.mock('framer-motion', () => {
   const actual = jest.requireActual('framer-motion');

@@ -2,10 +2,10 @@ import axiosInstance from '../axios';
 import { TeamModel, TeamMemberModel } from '@/types/team';
 
 const API_ENDPOINTS = {
-  ORGANIZATION_TEAMS: (organizationId: number | string) => `/api/organizations/${organizationId}/teams`,
-  ORGANIZATION_TEAM: (organizationId: number | string, teamId: number | string) => `/api/organizations/${organizationId}/teams/${teamId}`,
-  TEAM_MEMBERS: (teamId: number | string) => `/api/teams/${teamId}/members`,
-  TEAM_MEMBER: (teamId: number | string, userId: number | string) => `/api/teams/${teamId}/members/${userId}`,
+  ORGANIZATION_TEAMS: (organizationId: number | string) => `/organizations/${organizationId}/teams`,
+  ORGANIZATION_TEAM: (organizationId: number | string, teamId: number | string) => `/organizations/${organizationId}/teams/${teamId}`,
+  TEAM_MEMBERS: (teamId: number | string) => `/teams/${teamId}/members`,
+  TEAM_MEMBER: (teamId: number | string, userId: number | string) => `/teams/${teamId}/members/${userId}`,
 };
 
 /**

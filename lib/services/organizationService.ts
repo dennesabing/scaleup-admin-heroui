@@ -104,3 +104,41 @@ export const acceptInvitation = async (token: string): Promise<OrganizationMembe
   const response = await axiosInstance.post(`/api/organization-invitations/${token}/accept`);
   return response.data.data;
 };
+
+/**
+ * Get all attributes for an organization
+ */
+export const getOrganizationAttributes = async (organizationId: number | string): Promise<Record<string, any>> => {
+  const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_ATTRIBUTES(organizationId));
+  return response.data.data;
+};
+
+/**
+ * Create or update organization attributes
+ */
+export const createOrganizationAttributes = async (organizationId: number | string, attributes: Record<string, any>): Promise<Record<string, any>> => {
+  const response = await axiosInstance.post(API_ENDPOINTS.ORGANIZATION_ATTRIBUTES(organizationId), attributes);
+  return response.data.data;
+};
+
+/**
+ * Update a specific organization attribute
+ */
+export const updateOrganizationAttribute = async (organizationId: number | string, attribute: string, value: any): Promise<Record<string, any>> => {
+  const response = await axiosInstance.put(API_ENDPOINTS.ORGANIZATION_ATTRIBUTE(organizationId, attribute), { value });
+  return response.data.data;
+};
+
+/**
+ * Delete a specific organization attribute
+ */
+export const deleteOrganizationAttribute = async (organizationId: number | string, attribute: string): Promise<void> => {
+  await axiosInstance.delete(API_ENDPOINTS.ORGANIZATION_ATTRIBUTE(organizationId, attribute));
+};
+
+/**
+ * Delete all attributes for an organization
+ */
+export const deleteAllOrganizationAttributes = async (organizationId: number | string): Promise<void> => {
+  await axiosInstance.delete(API_ENDPOINTS.ORGANIZATION_ATTRIBUTES(organizationId));
+};

@@ -3,9 +3,7 @@ import { UserModel } from '@/lib/auth';
 export interface OrganizationModel {
   id: number;
   name: string;
-  slug: string;
   description?: string;
-  logo_url?: string;
   created_at: string;
   updated_at: string;
   attributes?: Record<string, any>;

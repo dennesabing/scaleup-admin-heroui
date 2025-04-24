@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { OrganizationModel } from '@/types/organization';
 import { getOrganizations } from '@/lib/services/organizationService';
 
@@ -20,11 +20,18 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [currentOrganization, setCurrentOrganization] = useState<OrganizationModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isLoadingRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
 
   const loadOrganizations = async () => {
+    // Prevent concurrent loading and duplicate requests
+    if (isLoadingRef.current) return;
+    
     try {
+      isLoadingRef.current = true;
       setIsLoading(true);
       setError(null);
+      
       const orgs = await getOrganizations();
       setOrganizations(orgs);
       
@@ -41,11 +48,19 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
       setError('Failed to load organizations. Please try again later.');
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
+      initialLoadDoneRef.current = true;
     }
   };
 
+  // Single useEffect for initial load
   useEffect(() => {
-    loadOrganizations();
+    // Only load if we haven't already done the initial load
+    if (!initialLoadDoneRef.current) {
+      loadOrganizations();
+    }
+    
+    // No dependencies needed as we're using refs to track state
   }, []);
 
   const setCurrentOrganizationId = (id: number | null) => {
@@ -63,6 +78,8 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const refreshOrganizations = async () => {
+    // Don't refresh if we're already loading
+    if (isLoadingRef.current) return;
     await loadOrganizations();
   };
 

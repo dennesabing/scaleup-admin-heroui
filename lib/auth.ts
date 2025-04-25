@@ -205,16 +205,23 @@ export const register = async (
   password: string, 
   name: string,
   password_confirmation: string,
-  accept_terms: boolean
+  accept_terms: boolean,
+  invitationData?: {
+    invitation_token?: string;
+    organization_id?: string;
+  }
 ): Promise<{ auth: AuthModel, user: UserModel }> => {
   try {
-    const response = await axiosInstance.post(API_ENDPOINTS.REGISTER, {
+    const requestData = {
       email,
       password,
       name,
       password_confirmation,
-      accept_terms
-    });
+      accept_terms,
+      ...invitationData
+    };
+
+    const response = await axiosInstance.post(API_ENDPOINTS.REGISTER, requestData);
     
     const auth = response.data as AuthModel;
     setAuth(auth);
@@ -285,5 +292,30 @@ export const getUser = async (): Promise<UserModel> => {
   } catch (error) {
     const errorMessage = formatApiError(error);
     throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Auto-login a user with provided credentials
+ * This is used after successful registration with invitation
+ */
+export const autoLogin = async (email: string, password: string): Promise<{ auth: AuthModel, user: UserModel }> => {
+  try {
+    // Use the existing login function to log in the user
+    const result = await login(email, password);
+    return result;
+  } catch (error) {
+    console.error('Auto-login failed:', error);
+    // Create a minimal user object to handle the case where login fails
+    // but we still want to proceed with redirection
+    const minimalUser: UserModel = {
+      id: 0,
+      email,
+      name: '',
+    };
+    return { 
+      auth: { access_token: '' },
+      user: minimalUser 
+    };
   }
 }; 

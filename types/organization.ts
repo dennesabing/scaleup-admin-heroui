@@ -17,6 +17,7 @@ export interface OrganizationMemberModel {
   user?: UserModel;
   created_at: string;
   updated_at: string;
+  is_current_user: boolean;
 }
 
 export interface OrganizationInvitationModel {
@@ -29,4 +30,5 @@ export interface OrganizationInvitationModel {
   expires_at: string;
   created_at: string;
   updated_at: string;
+  organization: OrganizationModel;
 } 

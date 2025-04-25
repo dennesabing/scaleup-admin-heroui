@@ -59,7 +59,7 @@ export const formatTime = (dateInput: Date | string): string => {
 };
 
 /**
- * Format a date or date string as a relative time (e.g., "2 hours ago", "Yesterday", etc.)
+ * Format a date or date string as a relative time (e.g., "2 hours ago", "Yesterday", "in 2 days", etc.)
  * @param dateInput Date object or date string
  * @returns Relative time string
  */
@@ -72,32 +72,42 @@ export const formatRelativeTime = (dateInput: Date | string): string => {
   
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
+  const isFuture = diffMs < 0;
+  
+  // Get absolute difference values
+  const absDiffMs = Math.abs(diffMs);
+  const absDiffSecs = Math.floor(absDiffMs / 1000);
+  const absDiffMins = Math.floor(absDiffSecs / 60);
+  const absDiffHours = Math.floor(absDiffMins / 60);
+  const absDiffDays = Math.floor(absDiffHours / 24);
   
   // Less than a minute
-  if (diffSecs < 60) {
-    return 'Just now';
+  if (absDiffSecs < 60) {
+    return isFuture ? 'In a moment' : 'Just now';
   }
   
   // Less than an hour
-  if (diffMins < 60) {
-    return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+  if (absDiffMins < 60) {
+    return isFuture
+      ? `In ${absDiffMins} ${absDiffMins === 1 ? 'minute' : 'minutes'}`
+      : `${absDiffMins} ${absDiffMins === 1 ? 'minute' : 'minutes'} ago`;
   }
   
   // Less than a day
-  if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+  if (absDiffHours < 24) {
+    return isFuture
+      ? `In ${absDiffHours} ${absDiffHours === 1 ? 'hour' : 'hours'}`
+      : `${absDiffHours} ${absDiffHours === 1 ? 'hour' : 'hours'} ago`;
   }
   
   // Less than a week
-  if (diffDays < 7) {
-    if (diffDays === 1) {
-      return 'Yesterday';
+  if (absDiffDays < 7) {
+    if (absDiffDays === 1) {
+      return isFuture ? 'Tomorrow' : 'Yesterday';
     }
-    return `${diffDays} days ago`;
+    return isFuture
+      ? `In ${absDiffDays} days`
+      : `${absDiffDays} days ago`;
   }
   
   // Default to standard date format for older dates

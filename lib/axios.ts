@@ -17,6 +17,18 @@ const axiosInstance = axios.create({
   httpsAgent // Add the https agent to ignore certificate errors
 });
 
+// Create a public axios instance that doesn't use authentication
+// This is used for public routes like invitation pages
+export const publicAxiosInstance = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  timeout: 10000,
+  httpsAgent
+});
+
 // Add request interceptor to attach auth token
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -63,6 +75,12 @@ axiosInstance.interceptors.response.use(
     
     return Promise.reject(error);
   }
+);
+
+// Add simplified response interceptor for public instance (no redirects)
+publicAxiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => Promise.reject(error)
 );
 
 export default axiosInstance; 

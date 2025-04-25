@@ -47,15 +47,41 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
     };
   }, [router.pathname]);
 
+  // Check if the current page needs organization/team context
+  const needsOrganizationContext = () => {
+    // Only include organization context for paths that explicitly need it
+    return (
+      router.pathname.startsWith('/organizations') || 
+      router.pathname.startsWith('/teams') || 
+      router.pathname.startsWith('/dashboard') ||
+      router.pathname === '/' // Home page may need org context
+    );
+  };
+
+  // Render the appropriate layout based on the page type
+  const renderPage = () => {
+    const pageWithLayout = getLayout(<Component {...pageProps} />);
+    
+    // Only wrap with Organization/Team providers if needed
+    if (needsOrganizationContext()) {
+      return (
+        <OrganizationProvider>
+          <TeamProvider>
+            {pageWithLayout}
+          </TeamProvider>
+        </OrganizationProvider>
+      );
+    }
+    
+    // Otherwise return the page without organization context
+    return pageWithLayout;
+  };
+
   return (
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider>
         <ErrorBoundary>
-          <OrganizationProvider>
-            <TeamProvider>
-              {getLayout(<Component {...pageProps} />)}
-            </TeamProvider>
-          </OrganizationProvider>
+          {renderPage()}
         </ErrorBoundary>
       </NextThemesProvider>
     </HeroUIProvider>

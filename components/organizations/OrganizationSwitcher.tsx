@@ -77,13 +77,13 @@ export const OrganizationSwitcher = () => {
               )
             }
             className={org.id === currentOrganization?.id ? 'bg-primary-100' : ''}
-            onClick={() => handleSelectOrganization(org.id)}
+            onPress={() => handleSelectOrganization(org.id)}
           >
             {org.name}
           </DropdownItem>
         ))}
         <DropdownItem 
-          onClick={handleCreateOrganization}
+          onPress={handleCreateOrganization}
           startContent={<PlusIcon size={16} className="text-default-500" />}
           className="text-primary"
         >

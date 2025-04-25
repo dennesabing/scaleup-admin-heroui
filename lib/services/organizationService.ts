@@ -142,3 +142,19 @@ export const deleteOrganizationAttribute = async (organizationId: number | strin
 export const deleteAllOrganizationAttributes = async (organizationId: number | string): Promise<void> => {
   await axiosInstance.delete(API_ENDPOINTS.ORGANIZATION_ATTRIBUTES(organizationId));
 };
+
+/**
+ * Get all invitations for an organization
+ */
+export const getOrganizationInvitations = async (organizationId: number | string): Promise<OrganizationInvitationModel[]> => {
+  const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_INVITATIONS(organizationId));
+  return response.data.data;
+};
+
+/**
+ * Resend an organization invitation
+ */
+export const resendOrganizationInvitation = async (organizationId: number | string, invitationId: number | string): Promise<OrganizationInvitationModel> => {
+  const response = await axiosInstance.post(`${API_ENDPOINTS.ORGANIZATION_INVITATION(organizationId, invitationId)}/resend`);
+  return response.data.data;
+};

@@ -1,13 +1,15 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Button } from "@heroui/button";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Input } from "@heroui/input";
 import { Textarea } from "@heroui/input";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { Tooltip } from "@heroui/tooltip";
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/authMiddleware';
+import { getAuth } from '@/lib/auth';
 import { 
   getOrganization, 
   getOrganizationMembers, 
@@ -19,7 +21,10 @@ import {
   deleteOrganizationAttribute,
   createOrganizationInvitation,
   updateOrganizationMember,
-  removeOrganizationMember
+  removeOrganizationMember,
+  cancelOrganizationInvitation,
+  getOrganizationInvitations,
+  resendOrganizationInvitation
 } from '@/lib/services/organizationService';
 import { 
   createTeam, 
@@ -27,11 +32,39 @@ import {
   updateTeam,
   deleteTeam
 } from '@/lib/services/teamService';
-import { OrganizationModel, OrganizationMemberModel } from '@/types/organization';
+import { OrganizationModel, OrganizationMemberModel, OrganizationInvitationModel } from '@/types/organization';
 import { TeamModel } from '@/types/team';
-import { BuildingIcon, Users, Settings, PlusIcon, Trash, X, Edit } from '@/components/icons';
+import { BuildingIcon, Users, Settings, PlusIcon, Trash, X, Edit, UserPlus, Mail, RefreshCw, MoreVertical } from '@/components/icons';
 import { Role } from '@/utils/permissions';
 import AdminLayout from "@/layouts/admin";
+import { formatDateTime, formatDate, formatRelativeTime } from '@/lib/utils/dateFormatter';
+import { Card, CardBody } from "@heroui/card";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { Chip } from "@heroui/chip";
+
+// Simple User component implementation
+const User = ({ name, description, avatarProps }: { name: string, description: string, avatarProps: any }) => {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-full bg-default-200 flex items-center justify-center text-default-600 overflow-hidden">
+        {avatarProps.src ? 
+          <img src={avatarProps.src} alt={avatarProps.name} className="w-full h-full object-cover" /> : 
+          avatarProps.name?.charAt(0).toUpperCase()
+        }
+      </div>
+      <div>
+        <p className="text-sm font-medium">{name}</p>
+        <p className="text-xs text-default-500">{description}</p>
+      </div>
+    </div>
+  );
+};
+
+// Define the invitation response interface which might have pending_invitations
+interface OrganizationInvitationResponse {
+  data?: OrganizationInvitationModel[];
+  pending_invitations?: OrganizationInvitationModel[];
+}
 
 export default function OrganizationDetailPage() {
   const [organization, setOrganization] = useState<OrganizationModel | null>(null);
@@ -40,6 +73,7 @@ export default function OrganizationDetailPage() {
   const [attributes, setAttributes] = useState<Record<string, any>>({});
   const [isLoadingAttributes, setIsLoadingAttributes] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<OrganizationInvitationModel[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -54,6 +88,15 @@ export default function OrganizationDetailPage() {
   const [attributesError, setAttributesError] = useState<string | null>(null);
   const [attributesSuccess, setAttributesSuccess] = useState<string | null>(null);
   
+  // Member success state
+  const [memberSuccess, setMemberSuccess] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [removeMemberModalOpen, setRemoveMemberModalOpen] = useState(false);
+  const [cancelInvitationModalOpen, setCancelInvitationModalOpen] = useState(false);
+
+  // Loading state
+  const [isInvitationLoading, setInvitationLoading] = useState(false);
+  
   // Refs to prevent duplicate API calls
   const isLoadingOrgRef = useRef(false);
   const isLoadingAttributesRef = useRef(false);
@@ -64,7 +107,7 @@ export default function OrganizationDetailPage() {
   const { id } = router.query;
   
   // Protect this route
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { setCurrentOrganizationId, refreshOrganizations } = useOrganization();
   
   // Members invitation state
@@ -89,11 +132,65 @@ export default function OrganizationDetailPage() {
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamSuccess, setTeamSuccess] = useState<string | null>(null);
   
+  // Team detail modal state
+  const [teamDetailModalOpen, setTeamDetailModalOpen] = useState(false);
+  const [currentTeam, setCurrentTeam] = useState<TeamModel | null>(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editTeamDescription, setEditTeamDescription] = useState('');
+  const [isUpdatingTeam, setIsUpdatingTeam] = useState(false);
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false);
+  const [teamDetailError, setTeamDetailError] = useState<string | null>(null);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  
   // Teams state
   const [teams, setTeams] = useState<TeamModel[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const isLoadingTeamsRef = useRef(false);
   const teamsLoadedRef = useRef(false);
+  
+  // Invitation management state
+  const [invitationModalOpen, setInvitationModalOpen] = useState(false);
+  const [currentInvitation, setCurrentInvitation] = useState<OrganizationInvitationModel | null>(null);
+  const [isResendingInvitation, setIsResendingInvitation] = useState(false);
+  const [isDeletingInvitation, setIsDeletingInvitation] = useState(false);
+  const [invitationActionError, setInvitationActionError] = useState<string | null>(null);
+  const [invitationConfirmOpen, setInvitationConfirmOpen] = useState(false);
+  
+  // Let's create a new state variable to track the current members tab 
+  const [membersActiveTab, setMembersActiveTab] = useState('active');
+  
+  // Current user email state to identify the user's own records
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  
+  // Effect to set edit team values when current team changes
+  useEffect(() => {
+    if (currentTeam) {
+      setEditTeamName(currentTeam.name);
+      setEditTeamDescription(currentTeam.description || '');
+    }
+  }, [currentTeam]);
+  
+  // Clear team success message after 5 seconds
+  useEffect(() => {
+    if (teamSuccess) {
+      const timer = setTimeout(() => {
+        setTeamSuccess(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [teamSuccess]);
+  
+  // Clear invitation success message after 5 seconds
+  useEffect(() => {
+    if (inviteSuccess) {
+      const timer = setTimeout(() => {
+        setInviteSuccess(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [inviteSuccess]);
   
   // Load organization data
   useEffect(() => {
@@ -105,36 +202,36 @@ export default function OrganizationDetailPage() {
       return;
     }
     
-    const loadOrganization = async () => {
-      try {
-        isLoadingOrgRef.current = true;
-        setIsLoading(true);
-        setError(null);
-        
-        const orgData = await getOrganization(id);
-        setOrganization(orgData);
-        
-        // Set form values for settings
-        setName(orgData.name);
-        setDescription(orgData.description || '');
-        
-        // Set this as the current organization
-        setCurrentOrganizationId(orgData.id);
-        
-        // Load attributes
-        await loadAttributes(id);
-        initialLoadDoneRef.current = true;
-      } catch (err) {
-        console.error('Failed to load organization:', err);
-        setError('Failed to load organization details. Please try again.');
-      } finally {
-        setIsLoading(false);
-        isLoadingOrgRef.current = false;
-      }
-    };
-    
-    loadOrganization();
+    loadOrganization(id);
   }, [id, setCurrentOrganizationId, organization]);
+  
+  const loadOrganization = async (organizationId: string) => {
+    try {
+      isLoadingOrgRef.current = true;
+      setIsLoading(true);
+      setError(null);
+      
+      const orgData = await getOrganization(organizationId);
+      setOrganization(orgData);
+      
+      // Set form values for settings
+      setName(orgData.name);
+      setDescription(orgData.description || '');
+      
+      // Set this as the current organization
+      setCurrentOrganizationId(orgData.id);
+      
+      // Load attributes
+      await loadAttributes(orgData.id);
+      initialLoadDoneRef.current = true;
+    } catch (err) {
+      console.error('Failed to load organization:', err);
+      setError('Failed to load organization details. Please try again.');
+    } finally {
+      setIsLoading(false);
+      isLoadingOrgRef.current = false;
+    }
+  };
   
   const loadAttributes = async (organizationId: string | number) => {
     // Skip if already loading attributes
@@ -163,8 +260,28 @@ export default function OrganizationDetailPage() {
       isLoadingMembersRef.current = true;
       setIsLoadingMembers(true);
       
-      const membersData = await getOrganizationMembers(organizationId);
-      setMembers(membersData || []);
+      const [membersData, invitationsResponse] = await Promise.all([
+        getOrganizationMembers(organizationId),
+        getOrganizationInvitations(organizationId)
+      ]);
+      
+      // Mark current user in the members list
+      const enhancedMembers = membersData?.map(member => ({
+        ...member,
+        // The backend should mark which member is the current user
+        is_current_user: member.is_current_user || false
+      })) || [];
+      
+      setMembers(enhancedMembers);
+      
+      // Handle different response formats
+      let invitationsData: OrganizationInvitationModel[] = [];
+      
+      // Assume response is directly the array of invitations
+      invitationsData = invitationsResponse as OrganizationInvitationModel[] || [];
+      
+      // Set all invitations, filtering can be done in the UI if needed
+      setPendingInvitations(invitationsData);
     } catch (err) {
       console.error('Failed to load organization members:', err);
       // Don't set error - we'll just show empty members
@@ -207,65 +324,98 @@ export default function OrganizationDetailPage() {
     }
   }, [activeTab, id, members.length]);
   
+  // Handle refreshing members
+  const refreshMembers = () => {
+    if (id && typeof id === 'string') {
+      loadMembers(id);
+    }
+  };
+  
+  // Helper function to format dates for display and tooltip
+  const formatDateWithTooltip = (dateString: string) => {
+    return (
+      <Tooltip content={formatDateTime(dateString)}>
+        <span>{formatDate(dateString)}</span>
+      </Tooltip>
+    );
+  };
+  
   // Render overview tab
   const renderOverviewTab = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-default-50 p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Organization Info</h2>
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm text-default-500">Name</p>
-            <p className="font-medium">{organization?.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-default-500">Description</p>
-            <p className="font-medium">{organization?.description || 'No description provided'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-default-500">Created</p>
-            <p className="font-medium">{organization ? new Date(organization.created_at).toLocaleDateString() : '-'}</p>
-          </div>
-          
-          {/* Attributes Section */}
-          {Object.keys(attributes).length > 0 && (
-            <div className="mt-4 pt-4 border-t border-default-200">
-              <p className="text-sm text-default-500 mb-2">Custom Attributes</p>
-              <div className="space-y-2">
-                {Object.entries(attributes).map(([key, value]) => (
-                  <div key={key} className="flex">
-                    <p className="text-sm font-medium w-1/2">{key}:</p>
-                    <p className="text-sm text-default-700 w-1/2">{String(value)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Overview</h2>
+        <Button 
+          isIconOnly
+          variant="light"
+          size="sm"
+          onClick={() => id && loadAttributes(id as string)}
+          title="Refresh"
+        >
+          <RefreshCw size={18} />
+        </Button>
       </div>
-      
-      <div className="bg-default-50 p-6 rounded-lg">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Members</h2>
-          <Button 
-            size="sm" 
-            variant="flat"
-            onClick={() => setActiveTab('members')}
-          >
-            View All
-          </Button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-default-50 p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Organization Info</h2>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-default-500">Name</p>
+              <p className="font-medium">{organization?.name}</p>
+            </div>
+            <div>
+              <p className="text-sm text-default-500">Description</p>
+              <p className="font-medium">{organization?.description || 'No description provided'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-default-500">Created</p>
+              <p className="font-medium">
+                {organization ? formatDateWithTooltip(organization.created_at) : '-'}
+              </p>
+            </div>
+            
+            {/* Attributes Section */}
+            {Object.keys(attributes).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-default-200">
+                <p className="text-sm text-default-500 mb-2">Custom Attributes</p>
+                <div className="space-y-2">
+                  {Object.entries(attributes).map(([key, value]) => (
+                    <div key={key} className="flex">
+                      <p className="text-sm font-medium w-1/2">{key}:</p>
+                      <p className="text-sm text-default-700 w-1/2">{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="text-center py-8">
-          <Users size={32} className="text-default-400 mx-auto mb-2" />
-          <p className="text-default-500">
-            View and manage organization members
-          </p>
-          <Button 
-            color="primary" 
-            className="mt-4"
-            onClick={() => setActiveTab('members')}
-          >
-            Manage Members
-          </Button>
+        
+        <div className="bg-default-50 p-6 rounded-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Members</h2>
+            <Button 
+              size="sm" 
+              variant="flat"
+              onClick={() => setActiveTab('members')}
+            >
+              View All
+            </Button>
+          </div>
+          <div className="text-center py-8">
+            <Users size={32} className="text-default-400 mx-auto mb-2" />
+            <p className="text-default-500">
+              View and manage organization members
+            </p>
+            <Button 
+              color="primary" 
+              className="mt-4"
+              onClick={() => setActiveTab('members')}
+            >
+              Manage Members
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -284,78 +434,223 @@ export default function OrganizationDetailPage() {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Members</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Members</h2>
+            <Button 
+              isIconOnly
+              variant="light"
+              size="sm"
+              onPress={refreshMembers}
+              title="Refresh"
+            >
+              <RefreshCw size={18} />
+            </Button>
+          </div>
           <Button 
             color="primary"
             startContent={<PlusIcon size={16} />}
-            onClick={() => setInviteModalOpen(true)}
+            onPress={() => setInviteModalOpen(true)}
           >
             Invite Member
           </Button>
         </div>
         
-        {members.length === 0 ? (
+        {memberSuccess && (
+          <div className="bg-success-100 text-success p-3 rounded-lg mb-4">
+            {memberSuccess}
+          </div>
+        )}
+        
+        {memberError && (
+          <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+            {memberError}
+          </div>
+        )}
+        
+        {members.length === 0 && pendingInvitations.length === 0 ? (
           <div className="text-center p-8 bg-default-100 rounded-lg">
             <Users size={48} className="mx-auto mb-4 text-default-400" />
             <h3 className="text-lg font-semibold mb-2">No Members</h3>
             <p className="text-default-500 mb-4">
-              You're the only member in this organization. Invite others to collaborate.
+              You haven't invited any members to this organization yet. Invite team members to collaborate on projects.
             </p>
             <Button 
               color="primary" 
-              onClick={() => setInviteModalOpen(true)}
+              onPress={() => setInviteModalOpen(true)}
             >
-              Invite Members
+              Invite First Member
             </Button>
           </div>
         ) : (
-          <div className="bg-default-50 rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-default-100">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-default-600 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-default-600 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-default-600 uppercase tracking-wider">Joined</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-default-600 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-default-200">
-                {members.map((member) => (
-                  <tr key={member.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-default-900">
-                          {member.user?.email || 'Unknown User'}
-                        </div>
+          <>
+            <Tabs 
+              aria-label="Members tabs" 
+              className="mb-6" 
+              selectedKey={membersActiveTab}
+              onSelectionChange={(key) => setMembersActiveTab(key.toString())}
+            >
+              <Tab key="active" title="Active Members">
+                <Card>
+                  <CardBody>
+                    {members.length === 0 ? (
+                      <div className="text-center py-6">
+                        <p className="text-default-500">No active members found.</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-success-100 text-success-800">
-                        {member.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-default-500">
-                      {new Date(member.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button 
-                        size="sm" 
-                        color="primary" 
-                        variant="flat"
-                        onClick={() => {
-                          setCurrentMember(member);
-                          setSelectedRole(member.role as Role);
-                          setMemberModalOpen(true);
-                        }}
+                    ) : (
+                      <Table 
+                        aria-label="Members table"
+                        removeWrapper
                       >
-                        Manage
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <TableHeader>
+                          <TableColumn>NAME</TableColumn>
+                          <TableColumn>EMAIL</TableColumn>
+                          <TableColumn>ROLE</TableColumn>
+                          <TableColumn>JOINED</TableColumn>
+                          <TableColumn>ACTIONS</TableColumn>
+                        </TableHeader>
+                        <TableBody>
+                          {members.map((member) => (
+                            <TableRow key={member.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <User
+                                    name={member.user?.name || "User"}
+                                    description={member.user?.email || ""}
+                                    avatarProps={{
+                                      src: member.user?.profile?.avatar_url || undefined,
+                                      showFallback: true,
+                                      name: member.user?.name || "User",
+                                    }}
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell>{member.user?.email}</TableCell>
+                              <TableCell>
+                                <Chip size="sm" color="primary" variant="flat">
+                                  {member.role}
+                                </Chip>
+                              </TableCell>
+                              <TableCell>
+                                {formatDateWithTooltip(member.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-end">
+                                  {member.role !== 'owner' && !member.is_current_user && (
+                                    <Button
+                                      size="sm"
+                                      variant="flat"
+                                      color="default"
+                                      isIconOnly
+                                      onPress={() => {
+                                        setCurrentMember(member);
+                                        setSelectedRole(member.role as Role);
+                                        setMemberModalOpen(true);
+                                      }}
+                                      title="Change role"
+                                    >
+                                      <Settings size={16} />
+                                    </Button>
+                                  )}
+                                  {(member.is_current_user || member.role === 'owner') && (
+                                    <Tooltip content={member.role === 'owner' ? "Owner role cannot be modified" : "You cannot modify your own role"}>
+                                      <div className="h-8 w-8 flex items-center justify-center text-default-300">
+                                        <Settings size={16} />
+                                      </div>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardBody>
+                </Card>
+              </Tab>
+              <Tab key="pending" title="Pending Invitations">
+                <Card>
+                  <CardBody>
+                    {pendingInvitations.length === 0 ? (
+                      <div className="text-center py-6">
+                        <p className="text-default-500">No pending invitations.</p>
+                      </div>
+                    ) : (
+                      <Table 
+                        aria-label="Pending invitations table"
+                        removeWrapper
+                      >
+                        <TableHeader>
+                          <TableColumn>EMAIL</TableColumn>
+                          <TableColumn>INVITED</TableColumn>
+                          <TableColumn>STATUS</TableColumn>
+                          <TableColumn>ACTIONS</TableColumn>
+                        </TableHeader>
+                        <TableBody>
+                          {pendingInvitations.map((invitation) => (
+                            <TableRow key={invitation.id}>
+                              <TableCell>{invitation.email}</TableCell>
+                              <TableCell>
+                                {formatDateWithTooltip(invitation.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <Chip size="sm" color="warning" variant="flat">
+                                  Pending
+                                </Chip>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="default"
+                                    isIconOnly
+                                    onPress={() => {
+                                      if (id && typeof id === 'string') {
+                                        setInvitationLoading(true);
+                                        resendOrganizationInvitation(id, invitation.id)
+                                          .then(() => {
+                                            setMemberSuccess("Invitation resent successfully");
+                                            setTimeout(() => setMemberSuccess(""), 3000);
+                                          })
+                                          .catch((err) => {
+                                            console.error("Failed to resend invitation:", err);
+                                            setMemberError("Failed to resend invitation");
+                                            setTimeout(() => setMemberError(""), 3000);
+                                          })
+                                          .finally(() => setInvitationLoading(false));
+                                      }
+                                    }}
+                                    title="Resend invitation"
+                                    isLoading={isInvitationLoading}
+                                  >
+                                    <Mail size={16} />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="danger"
+                                    isIconOnly
+                                    onPress={() => {
+                                      setCurrentInvitation(invitation);
+                                      setCancelInvitationModalOpen(true);
+                                    }}
+                                    title="Cancel invitation"
+                                  >
+                                    <X size={16} />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardBody>
+                </Card>
+              </Tab>
+            </Tabs>
+          </>
         )}
       </div>
     );
@@ -374,15 +669,32 @@ export default function OrganizationDetailPage() {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Teams</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Teams</h2>
+            <Button 
+              isIconOnly
+              variant="light"
+              size="sm"
+              onPress={() => id && loadTeams(id as string, true)}
+              title="Refresh"
+            >
+              <RefreshCw size={18} />
+            </Button>
+          </div>
           <Button 
             color="primary"
             startContent={<PlusIcon size={16} />}
-            onClick={() => setTeamModalOpen(true)}
+            onPress={() => setTeamModalOpen(true)}
           >
             Create Team
           </Button>
         </div>
+        
+        {teamSuccess && (
+          <div className="bg-success-100 text-success p-3 rounded-lg mb-4">
+            {teamSuccess}
+          </div>
+        )}
         
         {teams.length === 0 ? (
           <div className="text-center p-8 bg-default-100 rounded-lg">
@@ -393,7 +705,7 @@ export default function OrganizationDetailPage() {
             </p>
             <Button 
               color="primary" 
-              onClick={() => setTeamModalOpen(true)}
+              onPress={() => setTeamModalOpen(true)}
             >
               Create First Team
             </Button>
@@ -401,35 +713,46 @@ export default function OrganizationDetailPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {teams.map((team) => (
-              <div 
+              <Card 
                 key={team.id} 
                 className="bg-default-50 p-4 rounded-lg border border-default-200 hover:border-primary transition-all cursor-pointer"
+                isPressable
+                onPress={() => {
+                  setCurrentTeam(team);
+                  setTeamDetailModalOpen(true);
+                }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-medium">{team.name}</h3>
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    size="sm"
-                  >
-                    <Settings size={16} />
-                  </Button>
-                </div>
-                {team.description && (
-                  <p className="text-default-500 text-sm mb-3">{team.description}</p>
-                )}
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center">
-                    <Users size={16} className="text-default-400 mr-1" />
-                    <span className="text-xs text-default-500">
-                      0 Members
+                <CardBody className="p-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-medium">{team.name}</h3>
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      size="sm"
+                      onPress={() => {
+                        setCurrentTeam(team);
+                        setTeamDetailModalOpen(true);
+                      }}
+                    >
+                      <Settings size={16} />
+                    </Button>
+                  </div>
+                  {team.description && (
+                    <p className="text-default-500 text-sm mb-3">{team.description}</p>
+                  )}
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center">
+                      <Users size={16} className="text-default-400 mr-1" />
+                      <span className="text-xs text-default-500">
+                        0 Members
+                      </span>
+                    </div>
+                    <span className="text-xs text-default-400">
+                      Created {formatDateWithTooltip(team.created_at)}
                     </span>
                   </div>
-                  <span className="text-xs text-default-400">
-                    Created {new Date(team.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+                </CardBody>
+              </Card>
             ))}
           </div>
         )}
@@ -439,7 +762,20 @@ export default function OrganizationDetailPage() {
   
   // Render settings tab
   const renderSettingsTab = () => (
-    <div className="p-4 max-w-3xl mx-auto">
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold">Settings</h2>
+        <Button 
+          isIconOnly
+          variant="light"
+          size="sm"
+          onPress={() => id && loadOrganization(id as string)}
+          title="Refresh"
+        >
+          <RefreshCw size={18} />
+        </Button>
+      </div>
+      
       {error && (
         <div className="bg-danger-100 text-danger p-4 rounded-lg mb-6">
           {error}
@@ -452,7 +788,7 @@ export default function OrganizationDetailPage() {
         </div>
       )}
       
-      <div className="bg-default-50 p-6 rounded-lg mb-6">
+      <div className="bg-default-50 p-6 rounded-lg mb-6 max-w-3xl">
         <h2 className="text-xl font-semibold mb-4">General Information</h2>
         
         <form onSubmit={(e) => e.preventDefault()}>
@@ -492,6 +828,232 @@ export default function OrganizationDetailPage() {
       </div>
     </div>
   );
+  
+  // Handle team creation
+  const handleCreateTeam = async () => {
+    if (!id || typeof id !== 'string') return;
+    
+    if (!teamName.trim()) {
+      setTeamError('Team name is required');
+      return;
+    }
+    
+    try {
+      setIsCreatingTeam(true);
+      setTeamError(null);
+      setTeamSuccess(null);
+      
+      await createTeam(id, { 
+        name: teamName,
+        description: teamDescription 
+      });
+      
+      // Reset form
+      setTeamName('');
+      setTeamDescription('');
+      
+      // Close modal
+      setTeamModalOpen(false);
+      
+      // Refresh teams list
+      loadTeams(id, true);
+      
+      // Show success message
+      setTeamSuccess('Team created successfully');
+    } catch (err) {
+      console.error('Failed to create team:', err);
+      setTeamError('Failed to create team. Please try again.');
+    } finally {
+      setIsCreatingTeam(false);
+    }
+  };
+  
+  // Handle team update
+  const handleUpdateTeam = async () => {
+    if (!id || typeof id !== 'string' || !currentTeam) return;
+    
+    if (!editTeamName.trim()) {
+      setTeamDetailError('Team name is required');
+      return;
+    }
+    
+    try {
+      setIsUpdatingTeam(true);
+      setTeamDetailError(null);
+      
+      await updateTeam(id, currentTeam.id, { 
+        name: editTeamName,
+        description: editTeamDescription 
+      });
+      
+      // Close modal
+      setTeamDetailModalOpen(false);
+      
+      // Refresh teams list
+      loadTeams(id, true);
+      
+      // Show success message
+      setTeamSuccess('Team updated successfully');
+    } catch (err) {
+      console.error('Failed to update team:', err);
+      setTeamDetailError('Failed to update team. Please try again.');
+    } finally {
+      setIsUpdatingTeam(false);
+    }
+  };
+  
+  // Handle team deletion
+  const handleDeleteTeam = async () => {
+    if (!id || typeof id !== 'string' || !currentTeam) return;
+    
+    try {
+      setIsDeletingTeam(true);
+      setTeamDetailError(null);
+      
+      await deleteTeam(id, currentTeam.id);
+      
+      // Close modals
+      setDeleteConfirmationOpen(false);
+      setTeamDetailModalOpen(false);
+      
+      // Refresh teams list
+      loadTeams(id, true);
+      
+      // Show success message
+      setTeamSuccess('Team deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete team:', err);
+      setTeamDetailError('Failed to delete team. Please try again.');
+    } finally {
+      setIsDeletingTeam(false);
+    }
+  };
+  
+  // Handle invitation cancellation
+  const handleCancelInvitation = async () => {
+    if (!id || typeof id !== 'string' || !currentInvitation) return;
+    
+    try {
+      setIsDeletingInvitation(true);
+      setInvitationActionError(null);
+      
+      await cancelOrganizationInvitation(id, currentInvitation.id);
+      
+      // Close modals
+      setInvitationConfirmOpen(false);
+      setInvitationModalOpen(false);
+      
+      // Refresh members list
+      loadMembers(id);
+      
+      // Show success message
+      setInviteSuccess('Invitation cancelled successfully');
+    } catch (err) {
+      console.error('Failed to cancel invitation:', err);
+      setInvitationActionError('Failed to cancel invitation. Please try again.');
+    } finally {
+      setIsDeletingInvitation(false);
+    }
+  };
+  
+  // Handle member role update
+  const handleUpdateMemberRole = async () => {
+    if (!id || typeof id !== 'string' || !currentMember || !selectedRole) return;
+    
+    try {
+      setIsSaving(true);
+      setMemberActionError(null);
+      
+      await updateOrganizationMember(id, currentMember.user_id, selectedRole);
+      
+      // Close modal
+      setMemberModalOpen(false);
+      
+      // Refresh members list
+      loadMembers(id);
+      
+      // Show success message
+      setInviteSuccess('Member role updated successfully');
+    } catch (err) {
+      console.error('Failed to update member role:', err);
+      setMemberActionError('Failed to update member role. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Handle member removal - check if the member is not an owner
+  const handleRemoveMember = async () => {
+    if (!id || typeof id !== 'string' || !currentMember) return;
+    
+    // Don't allow removing owners
+    if (currentMember.role === 'owner') {
+      setMemberActionError('Organization owners cannot be removed');
+      return;
+    }
+    
+    // Don't allow removing current user
+    if (currentMember.is_current_user) {
+      setMemberActionError('You cannot remove yourself from the organization');
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      setMemberActionError(null);
+      
+      await removeOrganizationMember(id, currentMember.user_id);
+      
+      // Close modal
+      setMemberModalOpen(false);
+      
+      // Refresh members list
+      loadMembers(id);
+      
+      // Show success message
+      setInviteSuccess('Member removed successfully');
+    } catch (err) {
+      console.error('Failed to remove member:', err);
+      setMemberActionError('Failed to remove member. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  // Handle invite submission
+  const handleInviteSubmit = async () => {
+    if (!id || typeof id !== 'string') return;
+    
+    if (!inviteEmail.trim()) {
+      setInviteError('Email address is required');
+      return;
+    }
+    
+    try {
+      setIsInviting(true);
+      setInviteError(null);
+      
+      await createOrganizationInvitation(id, inviteEmail, inviteRole);
+      
+      // Reset form and close modal
+      setInviteEmail('');
+      setInviteModalOpen(false);
+      
+      // Refresh members list
+      loadMembers(id);
+      
+      // Show success message
+      setInviteSuccess(`Invitation sent to ${inviteEmail}`);
+      
+      // Switch to pending invitations tab
+      setMembersActiveTab('pending');
+    } catch (err) {
+      console.error('Failed to send invitation:', err);
+      setInviteError('Failed to send invitation. Please try again.');
+    } finally {
+      setIsInviting(false);
+    }
+  };
   
   // If the page is loading, show a spinner
   if (isLoading) {
@@ -552,6 +1114,474 @@ export default function OrganizationDetailPage() {
           {activeTab === 'settings' && renderSettingsTab()}
         </Tab>
       </Tabs>
+
+      {/* Team Creation Modal */}
+      <Modal isOpen={teamModalOpen} onOpenChange={setTeamModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Create New Team</ModalHeader>
+          <ModalBody>
+            {teamError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {teamError}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <Input
+                label="Team Name"
+                placeholder="Enter team name"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                isRequired
+                fullWidth
+              />
+              
+              <Textarea
+                label="Description"
+                placeholder="Enter team description (optional)"
+                value={teamDescription}
+                onChange={(e) => setTeamDescription(e.target.value)}
+                fullWidth
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="flat" 
+              onPress={() => setTeamModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              color="primary" 
+              onPress={handleCreateTeam}
+              isLoading={isCreatingTeam}
+            >
+              Create Team
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Team Detail Modal */}
+      <Modal isOpen={teamDetailModalOpen} onOpenChange={setTeamDetailModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {currentTeam ? 'Team Details' : 'Loading...'}
+          </ModalHeader>
+          <ModalBody>
+            {teamDetailError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {teamDetailError}
+              </div>
+            )}
+            
+            {currentTeam && (
+              <div className="space-y-4">
+                <Input
+                  label="Team Name"
+                  placeholder="Enter team name"
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  isRequired
+                  fullWidth
+                />
+                
+                <Textarea
+                  label="Description"
+                  placeholder="Enter team description"
+                  value={editTeamDescription}
+                  onChange={(e) => setEditTeamDescription(e.target.value)}
+                  fullWidth
+                />
+                
+                <div className="pt-2">
+                  <p className="text-sm text-default-500">
+                    <span className="font-medium">Created:</span> {formatDateWithTooltip(currentTeam.created_at)}
+                  </p>
+                  {currentTeam.updated_at && (
+                    <p className="text-sm text-default-500">
+                      <span className="font-medium">Last Updated:</span> {formatDateWithTooltip(currentTeam.updated_at)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <div className="flex justify-between w-full">
+              <Button 
+                color="danger" 
+                variant="flat"
+                onPress={() => setDeleteConfirmationOpen(true)}
+              >
+                Delete Team
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="flat" 
+                  onPress={() => setTeamDetailModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  color="primary" 
+                  onPress={handleUpdateTeam}
+                  isLoading={isUpdatingTeam}
+                >
+                  Update Team
+                </Button>
+              </div>
+            </div>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Delete Team Confirmation Modal */}
+      <Modal isOpen={deleteConfirmationOpen} onOpenChange={setDeleteConfirmationOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Confirm Deletion</ModalHeader>
+          <ModalBody>
+            <div className="text-center">
+              <Trash size={40} className="mx-auto mb-4 text-danger" />
+              <p className="text-lg font-semibold mb-2">Delete Team</p>
+              <p className="text-default-500 mb-4">
+                Are you sure you want to delete the team "{currentTeam?.name}"? This action cannot be undone.
+              </p>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="flat" 
+              onPress={() => setDeleteConfirmationOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              color="danger" 
+              onPress={handleDeleteTeam}
+              isLoading={isDeletingTeam}
+            >
+              Delete Team
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Invitation Management Modal */}
+      <Modal isOpen={invitationModalOpen} onOpenChange={setInvitationModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {currentInvitation ? 'Manage Invitation' : 'Loading...'}
+          </ModalHeader>
+          <ModalBody>
+            {invitationActionError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {invitationActionError}
+              </div>
+            )}
+            
+            {currentInvitation && (
+              <div className="space-y-4">
+                <div className="bg-default-50 p-4 rounded-lg">
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Email:</span> {currentInvitation.email}
+                  </p>
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Role:</span> {currentInvitation.role}
+                  </p>
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Status:</span> 
+                    <span className="px-2 ml-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
+                      {currentInvitation.status}
+                    </span>
+                  </p>
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Sent:</span> {formatDateWithTooltip(currentInvitation.created_at)}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Expires:</span> {formatDateWithTooltip(currentInvitation.expires_at)}
+                  </p>
+                </div>
+                
+                <div className="bg-warning-50 p-3 rounded-lg text-sm text-warning-800">
+                  <p>This invitation has not been accepted yet. You can resend it or cancel it.</p>
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <div className="flex justify-between w-full">
+              <Button 
+                color="danger" 
+                variant="flat"
+                onPress={() => setInvitationConfirmOpen(true)}
+              >
+                Cancel Invitation
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="flat" 
+                  onPress={() => setInvitationModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Invitation Cancellation Confirmation Modal */}
+      <Modal isOpen={invitationConfirmOpen} onOpenChange={setInvitationConfirmOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Confirm Cancellation</ModalHeader>
+          <ModalBody>
+            <div className="text-center">
+              <X size={40} className="mx-auto mb-4 text-danger" />
+              <p className="text-lg font-semibold mb-2">Cancel Invitation</p>
+              <p className="text-default-500 mb-4">
+                Are you sure you want to cancel the invitation sent to "{currentInvitation?.email}"? This action cannot be undone.
+              </p>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="flat" 
+              onPress={() => setInvitationConfirmOpen(false)}
+            >
+              Back
+            </Button>
+            <Button 
+              color="danger" 
+              onPress={handleCancelInvitation}
+              isLoading={isDeletingInvitation}
+            >
+              Cancel Invitation
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Member Invitation Modal */}
+      <Modal isOpen={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Invite New Member</ModalHeader>
+          <ModalBody>
+            {inviteError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {inviteError}
+              </div>
+            )}
+            
+            {inviteSuccess && (
+              <div className="bg-success-100 text-success p-3 rounded-lg mb-4">
+                {inviteSuccess}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <Input
+                label="Email Address"
+                placeholder="Enter email address"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                type="email"
+                isRequired
+                fullWidth
+                startContent={<Mail size={16} className="text-default-400" />}
+              />
+              
+              <div>
+                <p className="text-sm mb-2">Member Role</p>
+                <Dropdown>
+                  <DropdownTrigger>
+                    <Button variant="flat" className="capitalize">
+                      {inviteRole}
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu 
+                    aria-label="Role selection" 
+                    onAction={(key) => setInviteRole(key as string)}
+                  >
+                    <DropdownItem key="admin">Admin</DropdownItem>
+                    <DropdownItem key="member">Member</DropdownItem>
+                    <DropdownItem key="guest">Guest</DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+              </div>
+              
+              <div className="bg-default-50 p-3 rounded-lg text-sm text-default-600">
+                <p className="font-medium mb-1">Role Permissions:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {inviteRole === 'admin' && (
+                    <>
+                      <li>Full access to organization settings</li>
+                      <li>Can manage teams and members</li>
+                      <li>Can invite new members</li>
+                      <li>Can create and manage all resources</li>
+                    </>
+                  )}
+                  {inviteRole === 'member' && (
+                    <>
+                      <li>Can view organization details</li>
+                      <li>Can create and join teams</li>
+                      <li>Can create and manage assigned resources</li>
+                      <li>Cannot manage organization settings</li>
+                    </>
+                  )}
+                  {inviteRole === 'guest' && (
+                    <>
+                      <li>Can view organization details</li>
+                      <li>Can view assigned teams</li>
+                      <li>Can view assigned resources</li>
+                      <li>Cannot create or modify content</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="flat" 
+              onPress={() => setInviteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              color="primary" 
+              onPress={handleInviteSubmit}
+              isLoading={isInviting}
+            >
+              Send Invitation
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Member Management Modal */}
+      <Modal isOpen={memberModalOpen} onOpenChange={setMemberModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {currentMember ? 'Manage Member Role' : 'Loading...'}
+          </ModalHeader>
+          <ModalBody>
+            {memberActionError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {memberActionError}
+              </div>
+            )}
+            
+            {currentMember && (
+              <div className="space-y-4">
+                <div className="bg-default-50 p-4 rounded-lg">
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Email:</span> {currentMember.user?.email || 'Unknown User'}
+                  </p>
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Current Role:</span> 
+                    <span className="px-2 ml-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-success-100 text-success-800">
+                      {currentMember.role}
+                    </span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Member Since:</span> {formatDateWithTooltip(currentMember.created_at)}
+                  </p>
+                </div>
+                
+                {currentMember.role !== 'owner' && (
+                  <>
+                    <div>
+                      <p className="text-sm mb-2">Change Role</p>
+                      <Dropdown>
+                        <DropdownTrigger>
+                          <Button variant="flat" className="capitalize">
+                            {selectedRole || 'Select Role'}
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu 
+                          aria-label="Role selection" 
+                          onAction={(key) => setSelectedRole(key as Role)}
+                        >
+                          <DropdownItem key={Role.ADMIN}>Admin</DropdownItem>
+                          <DropdownItem key={Role.MEMBER}>Member</DropdownItem>
+                          <DropdownItem key={Role.GUEST}>Guest</DropdownItem>
+                        </DropdownMenu>
+                      </Dropdown>
+                    </div>
+                    
+                    <div className="bg-default-50 p-3 rounded-lg text-sm text-default-600">
+                      <p className="font-medium mb-1">Role Permissions:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {selectedRole === Role.ADMIN && (
+                          <>
+                            <li>Full access to organization settings</li>
+                            <li>Can manage teams and members</li>
+                            <li>Can invite new members</li>
+                            <li>Can create and manage all resources</li>
+                          </>
+                        )}
+                        {selectedRole === Role.MEMBER && (
+                          <>
+                            <li>Can view organization details</li>
+                            <li>Can create and join teams</li>
+                            <li>Can create and manage assigned resources</li>
+                            <li>Cannot manage organization settings</li>
+                          </>
+                        )}
+                        {selectedRole === Role.GUEST && (
+                          <>
+                            <li>Can view organization details</li>
+                            <li>Can view assigned teams</li>
+                            <li>Can view assigned resources</li>
+                            <li>Cannot create or modify content</li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                  </>
+                )}
+                
+                {currentMember.role === 'owner' && (
+                  <div className="bg-warning-50 p-3 rounded-lg text-sm text-warning-800">
+                    <p>This member is an organization owner. Owner roles cannot be modified.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <div className="flex justify-between w-full">
+              <Button 
+                color="danger" 
+                variant="flat"
+                onPress={handleRemoveMember}
+                isLoading={isDeleting}
+                isDisabled={currentMember?.role === 'owner'}
+              >
+                Remove Member
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="flat" 
+                  onPress={() => setMemberModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  color="primary" 
+                  onPress={handleUpdateMemberRole}
+                  isLoading={isSaving}
+                  isDisabled={!selectedRole || selectedRole === currentMember?.role || currentMember?.role === 'owner'}
+                >
+                  Update Role
+                </Button>
+              </div>
+            </div>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

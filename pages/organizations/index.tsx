@@ -6,6 +6,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/router';
 import { PlusIcon, BuildingIcon } from '@/components/icons';
 import { useAuth } from '@/lib/authMiddleware';
+import AdminLayout from "@/layouts/admin";
 
 export default function OrganizationsPage() {
   const { organizations, isLoading, error } = useOrganization();
@@ -90,4 +91,8 @@ export default function OrganizationsPage() {
       )}
     </div>
   );
-} 
+}
+
+OrganizationsPage.getLayout = (page: React.ReactElement) => {
+  return <AdminLayout>{page}</AdminLayout>;
+}; 

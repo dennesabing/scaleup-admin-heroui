@@ -11,6 +11,7 @@ import { OrganizationModel, OrganizationMemberModel } from '@/types/organization
 import { UserModel } from '@/lib/auth';
 import { Role } from '@/utils/permissions';
 import { BuildingIcon, Users, MoreVertical, UserPlus, Trash, Edit } from '@/components/icons';
+import AdminLayout from "@/layouts/admin";
 
 export default function OrganizationMembersPage() {
   const [organization, setOrganization] = useState<OrganizationModel | null>(null);
@@ -286,6 +287,7 @@ export default function OrganizationMembersPage() {
                         </DropdownTrigger>
                         <DropdownMenu aria-label="Member actions">
                           <DropdownItem 
+                            key="change-role"
                             startContent={<Edit size={16} />}
                             onClick={() => handleUpdateRole(member.id, member.user_id, 
                               member.role === Role.ADMIN ? Role.MEMBER : Role.ADMIN
@@ -294,6 +296,7 @@ export default function OrganizationMembersPage() {
                             Change to {member.role === Role.ADMIN ? 'Member' : 'Admin'}
                           </DropdownItem>
                           <DropdownItem 
+                            key="remove"
                             startContent={<Trash size={16} />}
                             className="text-danger"
                             onClick={() => handleRemoveMember(member.user_id)}
@@ -312,4 +315,8 @@ export default function OrganizationMembersPage() {
       </div>
     </div>
   );
-} 
+}
+
+OrganizationMembersPage.getLayout = (page: React.ReactElement) => {
+  return <AdminLayout>{page}</AdminLayout>;
+}; 

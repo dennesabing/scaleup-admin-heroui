@@ -17,6 +17,7 @@ import {
 } from '@/lib/services/organizationService';
 import { OrganizationModel } from '@/types/organization';
 import { BuildingIcon, PlusIcon, Trash } from '@/components/icons';
+import AdminLayout from "@/layouts/admin";
 
 export default function OrganizationSettingsPage() {
   const [organization, setOrganization] = useState<OrganizationModel | null>(null);
@@ -426,4 +427,8 @@ export default function OrganizationSettingsPage() {
       </div>
     </div>
   );
-} 
+}
+
+OrganizationSettingsPage.getLayout = (page: React.ReactElement) => {
+  return <AdminLayout>{page}</AdminLayout>;
+}; 

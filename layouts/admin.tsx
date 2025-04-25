@@ -3,7 +3,7 @@ import { Link } from "@heroui/link";
 import { Button } from "@heroui/button";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, LayoutDashboard, Users, ShoppingBag, Settings, LogOut } from "@/components/icons";
+import { ChevronLeft, ChevronRight, LayoutDashboard, Users, ShoppingBag, Settings, LogOut, BuildingIcon } from "@/components/icons";
 import { useAuth } from "@/lib/authMiddleware";
 import { logout, getCurrentUser, getUser } from "@/lib/auth";
 import { EmailVerificationBanner } from "@/components";
@@ -11,7 +11,7 @@ import { EmailVerificationBanner } from "@/components";
 interface SidebarItem {
   title: string;
   href: string;
-  icon: "LayoutDashboard" | "Users" | "ShoppingBag" | "Settings";
+  icon: "LayoutDashboard" | "Users" | "ShoppingBag" | "Settings" | "BuildingIcon";
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -19,6 +19,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: "LayoutDashboard",
+  },
+  {
+    title: "Organizations",
+    href: "/organizations",
+    icon: "BuildingIcon",
   },
   {
     title: "Users",
@@ -46,7 +51,8 @@ const IconComponents = {
   LayoutDashboard,
   Users,
   ShoppingBag,
-  Settings
+  Settings,
+  BuildingIcon
 };
 
 export default function AdminLayout({

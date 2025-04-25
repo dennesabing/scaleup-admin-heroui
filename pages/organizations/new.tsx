@@ -6,6 +6,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/authMiddleware';
 import { createOrganization } from '@/lib/services/organizationService';
+import AdminLayout from "@/layouts/admin";
 
 export default function CreateOrganizationPage() {
   const [name, setName] = useState('');
@@ -106,4 +107,8 @@ export default function CreateOrganizationPage() {
       </form>
     </div>
   );
-} 
+}
+
+CreateOrganizationPage.getLayout = (page: React.ReactElement) => {
+  return <AdminLayout>{page}</AdminLayout>;
+}; 

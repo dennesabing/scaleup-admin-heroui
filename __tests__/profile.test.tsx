@@ -37,7 +37,7 @@ jest.mock("@/lib/auth", () => ({
 }));
 
 // Mock the user service functions
-jest.mock("@/lib/userService", () => ({
+jest.mock("@/lib/services/userService", () => ({
   updateUserProfile: jest.fn(),
   updateUserPassword: jest.fn(),
   updateUserEmail: jest.fn(),

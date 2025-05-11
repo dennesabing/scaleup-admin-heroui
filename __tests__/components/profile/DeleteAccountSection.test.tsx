@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import DeleteAccountSection from "@/components/profile/DeleteAccountSection";
-import { deleteUserAccount } from "@/lib/userService";
+import { deleteUserAccount } from "@/lib/services/userService";
 
 // Mock Next.js router
 const mockRouterPush = jest.fn();
@@ -15,7 +15,7 @@ jest.mock("next/router", () => ({
 }));
 
 // Mock the userService module
-jest.mock("@/lib/userService", () => ({
+jest.mock("@/lib/services/userService", () => ({
   deleteUserAccount: jest.fn(),
 }));
 

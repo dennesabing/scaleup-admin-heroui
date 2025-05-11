@@ -1,4 +1,4 @@
-import axiosInstance from "./axios";
+import axiosInstance from "../axios";
 import {
   formatApiError,
   getCurrentUser,
@@ -6,8 +6,8 @@ import {
   getUser,
   logout,
   UserProfile,
-} from "./auth";
-import { resendVerificationEmail } from "./auth";
+} from "../auth";
+import { resendVerificationEmail } from "../auth";
 
 import { getAvatarUrl } from "@/utils/avatar";
 
@@ -264,4 +264,4 @@ export const updateUserAvatarV2 = async (file: File): Promise<string> => {
 
     throw new Error(errorMessage);
   }
-};
+}; 

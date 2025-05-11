@@ -4,7 +4,7 @@ import { Button } from "@heroui/button";
 import FileUpload from "../ui/FileUpload";
 import ImageCropper from "../ui/ImageCropper";
 
-import { updateUserAvatarV2 } from "@/lib/userService";
+import { updateUserAvatarV2 } from "@/lib/services/userService";
 
 interface AvatarUploadProps {
   avatarUrl?: string;

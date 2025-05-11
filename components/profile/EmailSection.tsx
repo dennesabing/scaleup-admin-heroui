@@ -6,7 +6,7 @@ import { UserModel } from "@/lib/auth";
 import {
   updateUserEmail,
   resendUserVerificationEmail,
-} from "@/lib/userService";
+} from "@/lib/services/userService";
 
 interface EmailSectionProps {
   user: UserModel;

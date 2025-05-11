@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 
-import { updateUserPassword } from "../../lib/userService";
+import { updateUserPassword } from "@/lib/services/userService";
 
 interface PasswordSectionProps {
   onError: (error: unknown) => void;

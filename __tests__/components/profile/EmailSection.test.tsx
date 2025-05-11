@@ -5,10 +5,10 @@ import { EmailSection } from "@/components/profile/EmailSection";
 import {
   updateUserEmail,
   resendUserVerificationEmail,
-} from "@/lib/userService";
+} from "@/lib/services/userService";
 
 // Mock the userService module
-jest.mock("@/lib/userService", () => ({
+jest.mock("@/lib/services/userService", () => ({
   updateUserEmail: jest.fn(),
   resendUserVerificationEmail: jest.fn(),
 }));

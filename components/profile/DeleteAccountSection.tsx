@@ -4,7 +4,7 @@ import { Input } from "@heroui/input";
 import { useRouter } from "next/router";
 
 import { UserModel } from "@/lib/auth";
-import { deleteUserAccount } from "@/lib/userService";
+import { deleteUserAccount } from "@/lib/services/userService";
 
 interface DeleteAccountSectionProps {
   user: UserModel;

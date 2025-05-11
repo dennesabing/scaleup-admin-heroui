@@ -3,7 +3,7 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 
 import { Select } from "../../components/ui/Select";
-import { updateUserProfile } from "../../lib/userService";
+import { updateUserProfile } from "@/lib/services/userService";
 
 import AvatarUpload from "./AvatarUpload";
 

@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import AvatarUpload from "@/components/profile/AvatarUpload";
-import { updateUserAvatarV2 } from "@/lib/userService";
+import { updateUserAvatarV2 } from "@/lib/services/userService";
 
 // Create local mocks
 const mockGetAvatarUrl = (url: string) => url;
@@ -86,7 +86,7 @@ jest.mock("@/components/ui/FileUpload", () => {
 });
 
 // Mock the userService
-jest.mock("@/lib/userService", () => ({
+jest.mock("@/lib/services/userService", () => ({
   updateUserAvatarV2: jest.fn(),
 }));
 

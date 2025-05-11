@@ -3,10 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import PasswordSection from "@/components/profile/PasswordSection";
-import { updateUserPassword } from "@/lib/userService";
+import { updateUserPassword } from "@/lib/services/userService";
 
 // Mock the userService module
-jest.mock("@/lib/userService", () => ({
+jest.mock("@/lib/services/userService", () => ({
   updateUserPassword: jest.fn(),
 }));
 

@@ -18,4 +18,4 @@ export interface TeamMemberModel {
   user?: UserModel;
   created_at: string;
   updated_at: string;
-}
+} 

@@ -1,6 +1,6 @@
 import axiosInstance from "../axios";
 
-import { TeamModel, TeamMemberModel } from "@/types/team";
+import { TeamModel, TeamMemberModel } from "@/lib/team";
 
 const API_ENDPOINTS = {
   ORGANIZATION_TEAMS: (organizationId: number | string) =>

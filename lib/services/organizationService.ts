@@ -4,7 +4,7 @@ import {
   OrganizationModel,
   OrganizationMemberModel,
   OrganizationInvitationModel,
-} from "@/types/organization";
+} from "@/lib/organization";
 
 const API_ENDPOINTS = {
   ORGANIZATIONS: "/organizations",

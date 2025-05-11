@@ -29,7 +29,8 @@ import {
 import {
   OrganizationModel,
   OrganizationMemberModel,
-} from "@/types/organization";
+  OrganizationInvitationModel
+} from "@/lib/organization";
 import { UserModel, getCurrentUser } from "@/lib/auth";
 import {
   Role,

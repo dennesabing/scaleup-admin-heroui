@@ -4,5 +4,5 @@ export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-export * from "./organization";
-export * from "./team";
+export * from "@/lib/organization";
+export * from "@/lib/team";

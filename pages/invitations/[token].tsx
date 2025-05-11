@@ -11,7 +11,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { BuildingIcon, Mail, X } from "@/components/icons";
 import { getInvitationByToken } from "@/lib/services/organizationService";
 import { formatDateTime, formatRelativeTime } from "@/lib/utils/dateFormatter";
-import { OrganizationInvitationModel } from "@/types/organization";
+import { OrganizationInvitationModel } from "@/lib/organization";
 import { NextPageWithLayout } from "@/pages/_app";
 
 const InvitationAcceptPage: NextPageWithLayout = () => {

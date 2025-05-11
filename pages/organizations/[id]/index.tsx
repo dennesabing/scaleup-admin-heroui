@@ -34,9 +34,9 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   OrganizationModel,
   OrganizationMemberModel,
-  OrganizationInvitationModel,
-} from "@/types/organization";
-import { TeamModel } from "@/types/team";
+  OrganizationInvitationModel
+} from "@/lib/organization";
+import { TeamModel } from "@/lib/team";
 import { formatDate, formatDateTime } from "@/lib/utils/dateFormatter";
 import { getCurrentUser } from "@/lib/auth";
 import { useAuth } from "@/lib/authMiddleware";

@@ -7,7 +7,7 @@ import React, {
   useRef,
 } from "react";
 
-import { OrganizationModel } from "@/types/organization";
+import { OrganizationModel } from "@/lib/organization";
 import { getOrganizations } from "@/lib/services/organizationService";
 
 interface OrganizationContextType {

@@ -4,6 +4,7 @@ export interface OrganizationModel {
   id: number;
   name: string;
   description?: string;
+  logo_url?: string;
   created_at: string;
   updated_at: string;
   attributes?: Record<string, any>;
@@ -31,4 +32,4 @@ export interface OrganizationInvitationModel {
   created_at: string;
   updated_at: string;
   organization: OrganizationModel;
-}
+} 

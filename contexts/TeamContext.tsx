@@ -8,7 +8,7 @@ import React, {
 
 import { useOrganization } from "./OrganizationContext";
 
-import { TeamModel } from "@/types/team";
+import { TeamModel } from "@/lib/team";
 import { getOrganizationTeams } from "@/lib/services/teamService";
 
 interface TeamContextType {

@@ -15,7 +15,7 @@ import {
   updateOrganizationAttribute,
   deleteOrganizationAttribute,
 } from "@/lib/services/organizationService";
-import { OrganizationModel } from "@/types/organization";
+import { OrganizationModel } from "@/lib/organization";
 import { PlusIcon, Trash } from "@/components/icons";
 import AdminLayout from "@/layouts/admin";
 

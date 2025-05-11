@@ -1,30 +1,37 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { Button } from "@heroui/button";
-import { Tabs, Tab } from "@heroui/tabs";
-import { Input } from "@heroui/input";
-import { Textarea } from "@heroui/input";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
-import { Tooltip } from "@heroui/tooltip";
-import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/router';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { Chip } from "@heroui/chip"; 
+import { Avatar } from "@heroui/avatar";
+import { Divider } from "@heroui/divider";
+import { Button } from "@heroui/button";
+import { Tooltip } from "@heroui/tooltip";
+import { Spinner } from "@heroui/spinner";
+import { Tabs, Tab } from "@heroui/tabs";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { Input, Textarea } from "@heroui/input";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { OrganizationModel, OrganizationMemberModel, OrganizationInvitationModel } from '@/types/organization';
+import { TeamModel } from '@/types/team';
+import { UserModel } from '@/lib/auth';
+import { formatDate, formatDateTime } from '@/lib/utils/dateFormatter';
+import { capitalizeFirstLetter } from '@/lib/utils/stringUtils';
+import { getAuth, getCurrentUser } from '@/lib/auth';
 import { useAuth } from '@/lib/authMiddleware';
-import { getAuth } from '@/lib/auth';
+import { isOrganizationHead } from '@/utils/permissions';
 import { 
   getOrganization, 
-  getOrganizationMembers, 
-  getOrganizationAttributes,
+  getOrganizationMembers,
   updateOrganization,
-  deleteOrganization,
-  createOrganizationAttributes,
-  updateOrganizationAttribute,
-  deleteOrganizationAttribute,
   createOrganizationInvitation,
-  updateOrganizationMember,
   removeOrganizationMember,
   cancelOrganizationInvitation,
   getOrganizationInvitations,
-  resendOrganizationInvitation
+  resendOrganizationInvitation,
+  getOrganizationAttributes,
+  updateOrganizationMember
 } from '@/lib/services/organizationService';
 import { 
   createTeam, 
@@ -32,15 +39,9 @@ import {
   updateTeam,
   deleteTeam
 } from '@/lib/services/teamService';
-import { OrganizationModel, OrganizationMemberModel, OrganizationInvitationModel } from '@/types/organization';
-import { TeamModel } from '@/types/team';
-import { BuildingIcon, Users, Settings, PlusIcon, Trash, X, Edit, UserPlus, Mail, RefreshCw, MoreVertical } from '@/components/icons';
 import { Role } from '@/utils/permissions';
 import AdminLayout from "@/layouts/admin";
-import { formatDateTime, formatDate, formatRelativeTime } from '@/lib/utils/dateFormatter';
-import { Card, CardBody } from "@heroui/card";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
-import { Chip } from "@heroui/chip";
+import { BuildingIcon, Users, Settings, PlusIcon, Trash, X, Edit, UserPlus, Mail, RefreshCw, MoreVertical } from '@/components/icons';
 
 // Simple User component implementation
 const User = ({ name, description, avatarProps }: { name: string, description: string, avatarProps: any }) => {
@@ -76,6 +77,8 @@ export default function OrganizationDetailPage() {
   const [pendingInvitations, setPendingInvitations] = useState<OrganizationInvitationModel[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentUserMember, setCurrentUserMember] = useState<OrganizationMemberModel | null>(null);
   
   // Settings state variables
   const [name, setName] = useState('');
@@ -107,8 +110,15 @@ export default function OrganizationDetailPage() {
   const { id } = router.query;
   
   // Protect this route
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
+  // Get the current user info
+  const currentUser = getCurrentUser();
   const { setCurrentOrganizationId, refreshOrganizations } = useOrganization();
+  
+  // Helper to check if user can create organizations
+  const canCreateOrganization = () => {
+    return isOrganizationHead(currentUser?.roles);
+  };
   
   // Members invitation state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -201,7 +211,6 @@ export default function OrganizationDetailPage() {
     if (initialLoadDoneRef.current && organization?.id === parseInt(id)) {
       return;
     }
-    
     loadOrganization(id);
   }, [id, setCurrentOrganizationId, organization]);
   
@@ -272,7 +281,13 @@ export default function OrganizationDetailPage() {
         is_current_user: member.is_current_user || false
       })) || [];
       
-
+      // Find the current user and their role
+      const currentMember = enhancedMembers.find(member => member.is_current_user);
+      if (currentMember) {
+        setUserRole(currentMember.role);
+        setCurrentUserMember(currentMember);
+      }
+      
       setMembers(enhancedMembers);
       
       // Handle different response formats
@@ -338,6 +353,34 @@ export default function OrganizationDetailPage() {
       <Tooltip content={formatDateTime(dateString)}>
         <span>{formatDate(dateString)}</span>
       </Tooltip>
+    );
+  };
+  
+  // Member view component for regular members
+  const renderMemberView = () => {
+    return (
+      <div className="space-y-6">
+        <Card className="w-full">
+          <CardHeader className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold">{organization?.name}</h3>
+              <p className="text-default-500 text-sm">{organization?.description || 'No description provided'}</p>
+            </div>
+          </CardHeader>
+          <Divider />
+          <CardBody>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-md font-semibold mb-2">Organization Details</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-default-500">Created</div>
+                  <div>{organization?.created_at ? formatDate(organization.created_at) : 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
     );
   };
   
@@ -422,13 +465,16 @@ export default function OrganizationDetailPage() {
               <RefreshCw size={18} />
             </Button>
           </div>
-          <Button 
-            color="primary"
-            startContent={<PlusIcon size={16} />}
-            onPress={() => setInviteModalOpen(true)}
-          >
-            Invite Member
-          </Button>
+          {/* Show Invite Member button for owners, admins, and Organization Heads */}
+          {canCreateOrganization() && (
+            <Button 
+              color="primary"
+              startContent={<PlusIcon size={16} />}
+              onPress={() => setInviteModalOpen(true)}
+            >
+              Invite Member
+            </Button>
+          )}
         </div>
         
         {memberSuccess && (
@@ -448,14 +494,19 @@ export default function OrganizationDetailPage() {
             <Users size={48} className="mx-auto mb-4 text-default-400" />
             <h3 className="text-lg font-semibold mb-2">No Members</h3>
             <p className="text-default-500 mb-4">
-              You haven't invited any members to this organization yet. Invite team members to collaborate on projects.
+              {canCreateOrganization() 
+                ? "You haven't invited any members to this organization yet. Invite team members to collaborate on projects."
+                : "There are no other members in this organization yet."
+              }
             </p>
-            <Button 
-              color="primary" 
-              onPress={() => setInviteModalOpen(true)}
-            >
-              Invite First Member
-            </Button>
+            {canCreateOrganization() && (
+              <Button 
+                color="primary" 
+                onPress={() => setInviteModalOpen(true)}
+              >
+                Invite First Member
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -511,7 +562,8 @@ export default function OrganizationDetailPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex justify-end">
-                                  {member.role !== 'owner' && !member.is_current_user && (
+                                  {/* Only show member management buttons for owners, admins and Organization Heads */}
+                                  {member.role !== 'owner' && !member.is_current_user && canCreateOrganization() && (
                                     <Button
                                       size="sm"
                                       variant="flat"
@@ -527,12 +579,23 @@ export default function OrganizationDetailPage() {
                                       <Settings size={16} />
                                     </Button>
                                   )}
-                                  {(member.is_current_user || member.role === 'owner') && (
-                                    <Tooltip content={member.role === 'owner' ? "Owner role cannot be modified" : "You cannot modify your own role"}>
+                                  {/* Show tooltip explaining why action is disabled */}
+                                  {member.role === 'owner' && (
+                                    <Tooltip content="Owner role cannot be modified">
                                       <div className="h-8 w-8 flex items-center justify-center text-default-300">
                                         <Settings size={16} />
                                       </div>
                                     </Tooltip>
+                                  )}
+                                  {member.is_current_user && (
+                                    <Tooltip content="You cannot modify your own role">
+                                      <div className="h-8 w-8 flex items-center justify-center text-default-300">
+                                        <Settings size={16} />
+                                      </div>
+                                    </Tooltip>
+                                  )}
+                                  {!canCreateOrganization() && (
+                                    <div></div> 
                                   )}
                                 </div>
                               </TableCell>
@@ -576,72 +639,81 @@ export default function OrganizationDetailPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2 justify-end">
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    color="default"
-                                    isIconOnly
-                                    onPress={() => {
-                                      if (id && typeof id === 'string') {
-                                        setResendingInvitationId(invitation.id);
-                                        resendOrganizationInvitation(id, invitation.id)
-                                          .then((updatedInvitation) => {
-                                            // Update the specific invitation in the pendingInvitations array
-                                            setPendingInvitations(current => 
-                                              current.map(inv => 
-                                                inv.id === invitation.id ? updatedInvitation : inv
-                                              )
-                                            );
-                                            setMemberSuccess("Invitation resent successfully");
+                                  {/* Only show invitation management buttons for owners, admins, and Organization Heads */}
+                                  {canCreateOrganization() && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="flat"
+                                        color="default"
+                                        isIconOnly
+                                        onPress={() => {
+                                          if (id && typeof id === 'string') {
+                                            setResendingInvitationId(invitation.id);
+                                            resendOrganizationInvitation(id, invitation.id)
+                                              .then((updatedInvitation) => {
+                                                // Update the specific invitation in the pendingInvitations array
+                                                setPendingInvitations(current => 
+                                                  current.map(inv => 
+                                                    inv.id === invitation.id ? updatedInvitation : inv
+                                                  )
+                                                );
+                                                setMemberSuccess("Invitation resent successfully");
+                                                setTimeout(() => setMemberSuccess(""), 3000);
+                                              })
+                                              .catch((err) => {
+                                                console.error("Failed to resend invitation:", err);
+                                                setMemberError("Failed to resend invitation");
+                                                setTimeout(() => setMemberError(""), 3000);
+                                              })
+                                              .finally(() => setResendingInvitationId(null));
+                                          }
+                                        }}
+                                        title="Resend invitation"
+                                        isLoading={resendingInvitationId === invitation.id}
+                                      >
+                                        <Mail size={16} />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="flat"
+                                        color="primary"
+                                        isIconOnly
+                                        onPress={() => {
+                                          if (id && typeof id === 'string') {
+                                            // Copy invitation link to clipboard with organization_id
+                                            const inviteLink = `${window.location.origin}/invitations/${invitation.token}?organization_id=${id}`;
+                                            navigator.clipboard.writeText(inviteLink);
+                                            setMemberSuccess("Invitation link copied to clipboard");
                                             setTimeout(() => setMemberSuccess(""), 3000);
-                                          })
-                                          .catch((err) => {
-                                            console.error("Failed to resend invitation:", err);
-                                            setMemberError("Failed to resend invitation");
-                                            setTimeout(() => setMemberError(""), 3000);
-                                          })
-                                          .finally(() => setResendingInvitationId(null));
-                                      }
-                                    }}
-                                    title="Resend invitation"
-                                    isLoading={resendingInvitationId === invitation.id}
-                                  >
-                                    <Mail size={16} />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    color="primary"
-                                    isIconOnly
-                                    onPress={() => {
-                                      if (id && typeof id === 'string') {
-                                        // Copy invitation link to clipboard with organization_id
-                                        const inviteLink = `${window.location.origin}/invitations/${invitation.token}?organization_id=${id}`;
-                                        navigator.clipboard.writeText(inviteLink);
-                                        setMemberSuccess("Invitation link copied to clipboard");
-                                        setTimeout(() => setMemberSuccess(""), 3000);
-                                      }
-                                    }}
-                                    title="Copy invitation link"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    color="danger"
-                                    isIconOnly
-                                    onPress={() => {
-                                      setCurrentInvitation(invitation);
-                                      setInvitationConfirmOpen(true);
-                                    }}
-                                    title="Cancel invitation"
-                                  >
-                                    <X size={16} />
-                                  </Button>
+                                          }
+                                        }}
+                                        title="Copy invitation link"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="flat"
+                                        color="danger"
+                                        isIconOnly
+                                        onPress={() => {
+                                          setCurrentInvitation(invitation);
+                                          setInvitationConfirmOpen(true);
+                                        }}
+                                        title="Cancel invitation"
+                                      >
+                                        <X size={16} />
+                                      </Button>
+                                    </>
+                                  )}
+                                  {/* For regular members, show a message indicating no actions available */}
+                                  {!canCreateOrganization() && (
+                                    <span className="text-xs text-default-400">No actions available</span>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -659,6 +731,15 @@ export default function OrganizationDetailPage() {
     );
   };
   
+  // Add a helper function to check if the user is an admin or has Organization Head role
+  const isAdminOrOrgHead = () => {
+    // Check the user's roles array for "Organization Head"
+    const hasOrgHeadRole = currentUser?.roles?.includes("Organization Head");
+    
+    // User is an admin if they have admin role in the organization or the Organization Head role
+    return userRole === 'owner' || userRole === 'admin' || hasOrgHeadRole;
+  };
+
   // Render teams tab
   const renderTeamsTab = () => {
     if (isLoadingTeams) {
@@ -684,13 +765,16 @@ export default function OrganizationDetailPage() {
               <RefreshCw size={18} />
             </Button>
           </div>
-          <Button 
-            color="primary"
-            startContent={<PlusIcon size={16} />}
-            onPress={() => setTeamModalOpen(true)}
-          >
-            Create Team
-          </Button>
+          {/* Show Create Team button for owners, admins, and Organization Heads */}
+          {canCreateOrganization() && (
+            <Button 
+              color="primary"
+              startContent={<PlusIcon size={16} />}
+              onPress={() => setTeamModalOpen(true)}
+            >
+              Create Team
+            </Button>
+          )}
         </div>
         
         {teamSuccess && (
@@ -704,14 +788,20 @@ export default function OrganizationDetailPage() {
             <Users size={48} className="mx-auto mb-4 text-default-400" />
             <h3 className="text-lg font-semibold mb-2">No Teams</h3>
             <p className="text-default-500 mb-4">
-              You haven't created any teams for this organization yet. Teams help you organize members into groups with specific permissions and responsibilities.
+              {canCreateOrganization()
+                ? "You haven't created any teams for this organization yet. Teams help you organize members into groups with specific permissions and responsibilities."
+                : "There are no teams in this organization yet. Teams help organize members into groups with specific permissions and responsibilities."
+              }
             </p>
-            <Button 
-              color="primary" 
-              onPress={() => setTeamModalOpen(true)}
-            >
-              Create First Team
-            </Button>
+            {/* Show Create Team button for owners, admins, and Organization Heads */}
+            {canCreateOrganization() && (
+              <Button 
+                color="primary" 
+                onPress={() => setTeamModalOpen(true)}
+              >
+                Create First Team
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1059,32 +1149,66 @@ export default function OrganizationDetailPage() {
   };
   
   // If the page is loading, show a spinner
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  // If there's an error or no organization data, show error message
-  if (error || !organization) {
+  if (isLoading || !organization) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-danger-100 text-danger p-4 rounded-lg">
-          {error || 'Organization not found'}
+        <div className="flex h-[calc(100vh-150px)] justify-center">
+          <Spinner size="lg" color="primary" />
         </div>
-        <Button 
-          variant="flat" 
-          className="mt-4"
-          onClick={() => router.push('/organizations')}
-        >
-          Back to Organizations
-        </Button>
       </div>
     );
   }
 
+  // If there's an error or no organization data, show error message
+  if (error || !organization) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mt-8 text-center">
+          <h1 className="text-2xl font-bold text-default-900">
+            Organization Not Found
+          </h1>
+          <p className="mt-4 text-default-600">
+            The organization you&apos;re looking for doesn&apos;t exist or you
+            don&apos;t have access to it.
+          </p>
+          <div className="mt-6">
+            <Button
+              color="primary"
+              onClick={() => router.push('/organizations')}
+            >
+              Go Back to Organizations
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if the user's role is not owner to show simplified view
+  if (userRole !== 'owner' && userRole !== 'admin' && !canCreateOrganization()) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-default-900">
+              {organization?.name}
+            </h1>
+            <p className="text-default-600">Organization Details</p>
+          </div>
+          <Button
+            color="primary"
+            variant="light"
+            onClick={() => router.push('/organizations')}
+          >
+            Back to Organizations
+          </Button>
+        </div>
+        {renderMemberView()}
+      </div>
+    );
+  }
+
+  // If we have an organization, show its details with tabs
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -1117,7 +1241,7 @@ export default function OrganizationDetailPage() {
           {activeTab === 'settings' && renderSettingsTab()}
         </Tab>
       </Tabs>
-
+      
       {/* Team Creation Modal */}
       <Modal isOpen={teamModalOpen} onOpenChange={setTeamModalOpen}>
         <ModalContent>
@@ -1188,6 +1312,7 @@ export default function OrganizationDetailPage() {
                   onChange={(e) => setEditTeamName(e.target.value)}
                   isRequired
                   fullWidth
+                  isDisabled={!isAdminOrOrgHead()} 
                 />
                 
                 <Textarea
@@ -1196,6 +1321,7 @@ export default function OrganizationDetailPage() {
                   value={editTeamDescription}
                   onChange={(e) => setEditTeamDescription(e.target.value)}
                   fullWidth
+                  isDisabled={!isAdminOrOrgHead()}
                 />
                 
                 <div className="pt-2">
@@ -1213,27 +1339,34 @@ export default function OrganizationDetailPage() {
           </ModalBody>
           <ModalFooter>
             <div className="flex justify-between w-full">
-              <Button 
-                color="danger" 
-                variant="flat"
-                onPress={() => setDeleteConfirmationOpen(true)}
-              >
-                Delete Team
-              </Button>
+              {isAdminOrOrgHead() && (
+                <Button 
+                  color="danger" 
+                  variant="flat"
+                  onPress={() => setDeleteConfirmationOpen(true)}
+                >
+                  Delete Team
+                </Button>
+              )}
+              {!isAdminOrOrgHead() && (
+                <div></div> 
+              )}
               <div className="flex gap-2">
                 <Button 
                   variant="flat" 
                   onPress={() => setTeamDetailModalOpen(false)}
                 >
-                  Cancel
+                  {isAdminOrOrgHead() ? 'Cancel' : 'Close'}
                 </Button>
-                <Button 
-                  color="primary" 
-                  onPress={handleUpdateTeam}
-                  isLoading={isUpdatingTeam}
-                >
-                  Update Team
-                </Button>
+                {isAdminOrOrgHead() && (
+                  <Button 
+                    color="primary" 
+                    onPress={handleUpdateTeam}
+                    isLoading={isUpdatingTeam}
+                  >
+                    Update Team
+                  </Button>
+                )}
               </div>
             </div>
           </ModalFooter>

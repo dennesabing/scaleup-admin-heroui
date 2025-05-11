@@ -7,10 +7,15 @@ import { useRouter } from 'next/router';
 import { PlusIcon, BuildingIcon } from '@/components/icons';
 import { useAuth } from '@/lib/authMiddleware';
 import AdminLayout from "@/layouts/admin";
+import { getCurrentUser } from '@/lib/auth';
 
 export default function OrganizationsPage() {
   const { organizations, isLoading, error } = useOrganization();
   const router = useRouter();
+  const currentUser = getCurrentUser();
+  
+  // Check if the user has the Organization Head role
+  const canCreateOrganization = currentUser?.roles?.includes("Organization Head");
   
   // Protect this route
   const { isAuthenticated } = useAuth();
@@ -27,13 +32,15 @@ export default function OrganizationsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Organizations</h1>
-        <Button 
-          color="primary"
-          startContent={<PlusIcon />}
-          onClick={handleCreateOrganization}
-        >
-          Create Organization
-        </Button>
+        {canCreateOrganization && (
+          <Button 
+            color="primary"
+            startContent={<PlusIcon />}
+            onClick={handleCreateOrganization}
+          >
+            Create Organization
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -49,42 +56,41 @@ export default function OrganizationsPage() {
           <BuildingIcon size={48} className="mx-auto mb-4 text-default-400" />
           <h2 className="text-xl font-semibold mb-2">No Organizations</h2>
           <p className="text-default-500 mb-4">
-            You don't have any organizations yet. Create your first one to get started.
+            {canCreateOrganization 
+              ? "You don't have any organizations yet. Create your first one to get started."
+              : "You don't have access to any organizations yet. Please contact an administrator."
+            }
           </p>
-          <Button 
-            color="primary" 
-            onClick={handleCreateOrganization}
-          >
-            Create Organization
-          </Button>
+          {canCreateOrganization && (
+            <Button 
+              color="primary" 
+              onClick={handleCreateOrganization}
+            >
+              Create Organization
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {organizations.map((org) => (
-            <Card key={org.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <BuildingIcon size={24} className="text-default-500" />
-                  <h3 className="text-lg font-semibold">{org.name}</h3>
+            <Card key={org.id} isPressable onPress={() => handleViewOrganization(org.id)}>
+              <CardHeader className="flex gap-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-primary-100 text-primary-500">
+                  <BuildingIcon size={24} />
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-lg font-semibold">{org.name}</p>
+                  <p className="text-small text-default-500">
+                    Created: {new Date(org.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </CardHeader>
               <Divider />
               <CardBody>
-                <p className="text-default-500">
+                <p className="text-default-700">
                   {org.description || 'No description provided'}
                 </p>
               </CardBody>
-              <Divider />
-              <CardFooter>
-                <Button 
-                  color="primary" 
-                  variant="flat" 
-                  className="w-full"
-                  onClick={() => handleViewOrganization(org.id)}
-                >
-                  View Organization
-                </Button>
-              </CardFooter>
             </Card>
           ))}
         </div>

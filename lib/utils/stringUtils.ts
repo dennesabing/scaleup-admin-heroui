@@ -8,7 +8,8 @@
  * @returns The string with the first letter capitalized
  */
 export const capitalizeFirstLetter = (str: string): string => {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== "string") return "";
+
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
@@ -19,9 +20,10 @@ export const capitalizeFirstLetter = (str: string): string => {
  * @returns The truncated string with ellipsis if necessary
  */
 export const truncate = (str: string, maxLength: number): string => {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== "string") return "";
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + '...';
+
+  return str.slice(0, maxLength) + "...";
 };
 
 /**
@@ -30,12 +32,13 @@ export const truncate = (str: string, maxLength: number): string => {
  * @returns The string in title case
  */
 export const toTitleCase = (str: string): string => {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== "string") return "";
+
   return str
     .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };
 
 /**
@@ -44,13 +47,14 @@ export const toTitleCase = (str: string): string => {
  * @returns The slugified string
  */
 export const slugify = (str: string): string => {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== "string") return "";
+
   return str
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 };
 
 /**
@@ -59,12 +63,13 @@ export const slugify = (str: string): string => {
  * @returns The initials (max 2 characters)
  */
 export const getInitials = (name: string): string => {
-  if (!name || typeof name !== 'string') return '';
-  
+  if (!name || typeof name !== "string") return "";
+
   const parts = name.trim().split(/\s+/);
+
   if (parts.length === 1) {
     return parts[0].charAt(0).toUpperCase();
   }
-  
+
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}; 
+};

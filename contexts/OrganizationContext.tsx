@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { OrganizationModel } from '@/types/organization';
-import { getOrganizations } from '@/lib/services/organizationService';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useRef,
+} from "react";
+
+import { OrganizationModel } from "@/types/organization";
+import { getOrganizations } from "@/lib/services/organizationService";
 
 interface OrganizationContextType {
   organizations: OrganizationModel[];
@@ -11,13 +19,18 @@ interface OrganizationContextType {
   refreshOrganizations: () => Promise<void>;
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
+const OrganizationContext = createContext<OrganizationContextType | undefined>(
+  undefined,
+);
 
-const CURRENT_ORG_KEY = 'current_organization_id';
+const CURRENT_ORG_KEY = "current_organization_id";
 
-export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [organizations, setOrganizations] = useState<OrganizationModel[]>([]);
-  const [currentOrganization, setCurrentOrganization] = useState<OrganizationModel | null>(null);
+  const [currentOrganization, setCurrentOrganization] =
+    useState<OrganizationModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isLoadingRef = useRef(false);
@@ -26,26 +39,30 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const loadOrganizations = async () => {
     // Prevent concurrent loading and duplicate requests
     if (isLoadingRef.current) return;
-    
+
     try {
       isLoadingRef.current = true;
       setIsLoading(true);
       setError(null);
-      
+
       const orgs = await getOrganizations();
+
       setOrganizations(orgs);
-      
+
       // Try to set current organization from localStorage or default to first
       const storedOrgId = localStorage.getItem(CURRENT_ORG_KEY);
-      if (storedOrgId && orgs.some(org => org.id === parseInt(storedOrgId))) {
-        setCurrentOrganization(orgs.find(org => org.id === parseInt(storedOrgId)) || null);
+
+      if (storedOrgId && orgs.some((org) => org.id === parseInt(storedOrgId))) {
+        setCurrentOrganization(
+          orgs.find((org) => org.id === parseInt(storedOrgId)) || null,
+        );
       } else if (orgs.length > 0) {
         setCurrentOrganization(orgs[0]);
         localStorage.setItem(CURRENT_ORG_KEY, orgs[0].id.toString());
       }
     } catch (err) {
-      console.error('Failed to load organizations:', err);
-      setError('Failed to load organizations. Please try again later.');
+      console.error("Failed to load organizations:", err);
+      setError("Failed to load organizations. Please try again later.");
     } finally {
       setIsLoading(false);
       isLoadingRef.current = false;
@@ -59,7 +76,7 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (!initialLoadDoneRef.current) {
       loadOrganizations();
     }
-    
+
     // No dependencies needed as we're using refs to track state
   }, []);
 
@@ -67,10 +84,12 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (id === null) {
       localStorage.removeItem(CURRENT_ORG_KEY);
       setCurrentOrganization(null);
+
       return;
     }
-    
-    const org = organizations.find(o => o.id === id);
+
+    const org = organizations.find((o) => o.id === id);
+
     if (org) {
       localStorage.setItem(CURRENT_ORG_KEY, id.toString());
       setCurrentOrganization(org);
@@ -101,8 +120,12 @@ export const OrganizationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
 export const useOrganization = () => {
   const context = useContext(OrganizationContext);
+
   if (context === undefined) {
-    throw new Error('useOrganization must be used within an OrganizationProvider');
+    throw new Error(
+      "useOrganization must be used within an OrganizationProvider",
+    );
   }
+
   return context;
-}; 
+};

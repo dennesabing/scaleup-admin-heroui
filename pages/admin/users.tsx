@@ -1,31 +1,88 @@
 import { Divider } from "@heroui/divider";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { Users, SearchIcon, Settings } from "@/components/icons";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { getCurrentUser } from "@/lib/auth";
 
+import { Users, SearchIcon, Settings } from "@/components/icons";
+import { getCurrentUser } from "@/lib/auth";
 import AdminLayout from "@/layouts/admin";
 
 const users = [
-  { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", status: "active", date: "2023-11-28" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Editor", status: "pending", date: "2023-11-27" },
-  { id: 3, name: "Robert Johnson", email: "robert@example.com", role: "Member", status: "active", date: "2023-11-26" },
-  { id: 4, name: "Emily Davis", email: "emily@example.com", role: "Editor", status: "inactive", date: "2023-11-25" },
-  { id: 5, name: "Michael Wilson", email: "michael@example.com", role: "Member", status: "active", date: "2023-11-24" },
-  { id: 6, name: "Sarah Brown", email: "sarah@example.com", role: "Member", status: "active", date: "2023-11-23" },
-  { id: 7, name: "David Miller", email: "david@example.com", role: "Editor", status: "pending", date: "2023-11-22" },
-  { id: 8, name: "Linda Wilson", email: "linda@example.com", role: "Member", status: "inactive", date: "2023-11-21" },
+  {
+    id: 1,
+    name: "John Doe",
+    email: "john@example.com",
+    role: "Admin",
+    status: "active",
+    date: "2023-11-28",
+  },
+  {
+    id: 2,
+    name: "Jane Smith",
+    email: "jane@example.com",
+    role: "Editor",
+    status: "pending",
+    date: "2023-11-27",
+  },
+  {
+    id: 3,
+    name: "Robert Johnson",
+    email: "robert@example.com",
+    role: "Member",
+    status: "active",
+    date: "2023-11-26",
+  },
+  {
+    id: 4,
+    name: "Emily Davis",
+    email: "emily@example.com",
+    role: "Editor",
+    status: "inactive",
+    date: "2023-11-25",
+  },
+  {
+    id: 5,
+    name: "Michael Wilson",
+    email: "michael@example.com",
+    role: "Member",
+    status: "active",
+    date: "2023-11-24",
+  },
+  {
+    id: 6,
+    name: "Sarah Brown",
+    email: "sarah@example.com",
+    role: "Member",
+    status: "active",
+    date: "2023-11-23",
+  },
+  {
+    id: 7,
+    name: "David Miller",
+    email: "david@example.com",
+    role: "Editor",
+    status: "pending",
+    date: "2023-11-22",
+  },
+  {
+    id: 8,
+    name: "Linda Wilson",
+    email: "linda@example.com",
+    role: "Member",
+    status: "inactive",
+    date: "2023-11-21",
+  },
 ];
 
 export default function AdminUsers() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   useEffect(() => {
     const checkAuthentication = async () => {
       const user = await getCurrentUser();
+
       if (!user) {
         router.push("/auth/login");
       }
@@ -34,9 +91,10 @@ export default function AdminUsers() {
     checkAuthentication();
   }, [router]);
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -55,11 +113,11 @@ export default function AdminUsers() {
         <div className="px-6 py-4 flex justify-between items-center">
           <div className="w-full sm:max-w-[50%]">
             <Input
+              isClearable
               placeholder="Search users..."
+              startContent={<SearchIcon className="text-default-400" />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              startContent={<SearchIcon className="text-default-400" />}
-              isClearable
               onClear={() => setSearchTerm("")}
             />
           </div>
@@ -70,12 +128,42 @@ export default function AdminUsers() {
             <table className="min-w-full divide-y divide-divider">
               <thead>
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Email</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Role</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Joined</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider">Actions</th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Name
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Email
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Role
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Status
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Joined
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-default-500 uppercase tracking-wider"
+                    scope="col"
+                  >
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-background divide-y divide-divider">
@@ -85,7 +173,9 @@ export default function AdminUsers() {
                       <div className="text-sm font-medium">{user.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-default-500">{user.email}</div>
+                      <div className="text-sm text-default-500">
+                        {user.email}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user.role}
@@ -96,8 +186,8 @@ export default function AdminUsers() {
                           user.status === "active"
                             ? "bg-success-100 text-success-800"
                             : user.status === "pending"
-                            ? "bg-warning-100 text-warning-800"
-                            : "bg-danger-100 text-danger-800"
+                              ? "bg-warning-100 text-warning-800"
+                              : "bg-danger-100 text-danger-800"
                         }`}
                       >
                         {user.status}
@@ -129,4 +219,4 @@ export default function AdminUsers() {
 
 AdminUsers.getLayout = (page: React.ReactElement) => {
   return <AdminLayout>{page}</AdminLayout>;
-}; 
+};

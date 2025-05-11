@@ -64,10 +64,12 @@ export const usStates: StateOption[] = [
 
 // Helper function to find state by code
 export const getStateByCode = (code: string): StateOption | undefined => {
-  return usStates.find(state => state.value === code);
+  return usStates.find((state) => state.value === code);
 };
 
 // Helper function to find state by name
 export const getStateByName = (name: string): StateOption | undefined => {
-  return usStates.find(state => state.label.toLowerCase() === name.toLowerCase());
-}; 
+  return usStates.find(
+    (state) => state.label.toLowerCase() === name.toLowerCase(),
+  );
+};

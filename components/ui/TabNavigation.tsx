@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from "react";
 
 export interface TabItem {
   id: string;
@@ -13,23 +13,31 @@ interface TabNavigationProps {
   className?: string;
 }
 
-export function TabNavigation({ tabs, activeTab, onTabChange, className = '' }: TabNavigationProps) {
+export function TabNavigation({
+  tabs,
+  activeTab,
+  onTabChange,
+  className = "",
+}: TabNavigationProps) {
   return (
     <div className={`border-b border-default-200 ${className}`}>
       <nav className="-mb-px flex space-x-8">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
+
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              aria-current={isActive ? "page" : undefined}
               className={`
                 py-4 px-1 border-b-2 font-medium text-sm flex items-center whitespace-nowrap
-                ${isActive 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-default-500 hover:text-default-700 hover:border-default-300'}
+                ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-default-500 hover:text-default-700 hover:border-default-300"
+                }
               `}
-              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onTabChange(tab.id)}
             >
               {tab.icon && <span className="mr-2">{tab.icon}</span>}
               {tab.label}
@@ -39,4 +47,4 @@ export function TabNavigation({ tabs, activeTab, onTabChange, className = '' }: 
       </nav>
     </div>
   );
-} 
+}

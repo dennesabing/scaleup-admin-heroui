@@ -1,6 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@heroui/button";
-import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
+import ReactCrop, {
+  Crop,
+  PixelCrop,
+  centerCrop,
+  makeAspectCrop,
+} from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
 interface ImageCropperProps {
@@ -16,7 +21,7 @@ interface ImageCropperProps {
 function centerAspectCrop(
   mediaWidth: number,
   mediaHeight: number,
-  aspect: number
+  aspect: number,
 ) {
   return centerCrop(
     makeAspectCrop(
@@ -26,10 +31,10 @@ function centerAspectCrop(
       },
       aspect,
       mediaWidth,
-      mediaHeight
+      mediaHeight,
     ),
     mediaWidth,
-    mediaHeight
+    mediaHeight,
   );
 }
 
@@ -37,7 +42,7 @@ function centerAspectCrop(
 function getCroppedImg(
   image: HTMLImageElement,
   crop: PixelCrop,
-  fileName: string
+  fileName: string,
 ): Promise<File> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -60,28 +65,33 @@ function getCroppedImg(
     0,
     0,
     crop.width,
-    crop.height
+    crop.height,
   );
 
   // Convert the canvas to a Blob and then to a File
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("Canvas is empty"));
-        return;
-      }
-      
-      // Get the original filename and extension
-      const fileExtension = fileName.split(".").pop();
-      const newFileName = `cropped-${fileName}`;
-      
-      // Create a new File object
-      const file = new File([blob], newFileName, {
-        type: `image/${fileExtension === "jpg" ? "jpeg" : fileExtension}`,
-      });
-      
-      resolve(file);
-    }, "image/jpeg", 0.95);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+
+          return;
+        }
+
+        // Get the original filename and extension
+        const fileExtension = fileName.split(".").pop();
+        const newFileName = `cropped-${fileName}`;
+
+        // Create a new File object
+        const file = new File([blob], newFileName, {
+          type: `image/${fileExtension === "jpg" ? "jpeg" : fileExtension}`,
+        });
+
+        resolve(file);
+      },
+      "image/jpeg",
+      0.95,
+    );
   });
 }
 
@@ -107,22 +117,23 @@ export const ImageCropper = ({
 
   // Create an object URL for the image file
   useEffect(() => {
-    if (typeof URL !== 'undefined' && URL.createObjectURL) {
+    if (typeof URL !== "undefined" && URL.createObjectURL) {
       try {
         const objectUrl = URL.createObjectURL(image);
+
         setImageSrc(objectUrl);
-        
+
         return () => {
           URL.revokeObjectURL(objectUrl);
         };
       } catch (error) {
-        console.error('Error creating object URL:', error);
+        console.error("Error creating object URL:", error);
         // Fallback for tests
-        setImageSrc('mock-image-url');
+        setImageSrc("mock-image-url");
       }
     } else {
       // Fallback for environments without URL.createObjectURL (like Jest)
-      setImageSrc('mock-image-url');
+      setImageSrc("mock-image-url");
     }
   }, [image]);
 
@@ -130,37 +141,40 @@ export const ImageCropper = ({
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const { width, height } = e.currentTarget;
+
       setCrop(centerAspectCrop(width, height, aspectRatio));
     },
-    [aspectRatio]
+    [aspectRatio],
   );
 
   // Handle the crop completion
   const handleCropComplete = useCallback(async () => {
     if (!completedCrop || !imgRef.current) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       const croppedImage = await getCroppedImg(
         imgRef.current,
         completedCrop,
-        image.name
+        image.name,
       );
-      
+
       // Check if the cropped image meets minimum dimensions
       const img = new Image();
+
       img.src = URL.createObjectURL(croppedImage);
-      
+
       img.onload = () => {
         URL.revokeObjectURL(img.src);
-        
+
         if (img.width < minWidth || img.height < minHeight) {
           alert(`Image must be at least ${minWidth}x${minHeight} pixels`);
           setIsLoading(false);
+
           return;
         }
-        
+
         onCropComplete(croppedImage);
       };
     } catch (error) {
@@ -174,49 +188,51 @@ export const ImageCropper = ({
   // Handle slider change for zoom
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newZoom = parseFloat(e.target.value);
-    
+
     if (imgRef.current && completedCrop) {
       const { width, height } = imgRef.current;
-      
+
       // Calculate new crop dimensions based on zoom
       const newWidth = Math.min(width * (newZoom / 100), width);
       const newHeight = Math.min(height * (newZoom / 100), height);
-      
+
       // Create a new centered crop with the new dimensions
-      setCrop(centerCrop(
-        {
-          unit: "px",
-          width: newWidth,
-          height: newHeight,
-          x: (width - newWidth) / 2,
-          y: (height - newHeight) / 2,
-        },
-        width,
-        height
-      ));
+      setCrop(
+        centerCrop(
+          {
+            unit: "px",
+            width: newWidth,
+            height: newHeight,
+            x: (width - newWidth) / 2,
+            y: (height - newHeight) / 2,
+          },
+          width,
+          height,
+        ),
+      );
     }
   };
 
   return (
     <div className="p-4 bg-background rounded-md border border-divider">
       <h3 className="text-md font-medium mb-4">Crop Your Image</h3>
-      
+
       <div className="mb-4">
         <div className="flex justify-center mb-4">
           {imageSrc && (
             <ReactCrop
+              keepSelection
+              aspect={aspectRatio}
+              circularCrop={aspectRatio === 1}
               crop={crop}
               onChange={(c: Crop) => setCrop(c)}
               onComplete={(c: PixelCrop) => setCompletedCrop(c)}
-              aspect={aspectRatio}
-              circularCrop={aspectRatio === 1}
-              keepSelection
             >
               <img
                 ref={imgRef}
-                src={imageSrc}
                 alt="Crop preview"
                 className="max-h-80 max-w-full"
+                src={imageSrc}
                 onLoad={onImageLoad}
               />
             </ReactCrop>
@@ -224,40 +240,40 @@ export const ImageCropper = ({
         </div>
 
         <div className="mb-4">
-          <label htmlFor="zoom" className="block text-sm font-medium mb-1">
+          <label className="block text-sm font-medium mb-1" htmlFor="zoom">
             Zoom
           </label>
           <input
-            id="zoom"
-            type="range"
-            min="10"
-            max="100"
-            step="1"
-            defaultValue="100"
-            onChange={handleZoomChange}
             className="w-full h-2 bg-content2 rounded-lg appearance-none cursor-pointer"
+            defaultValue="100"
+            id="zoom"
+            max="100"
+            min="10"
+            step="1"
+            type="range"
+            onChange={handleZoomChange}
           />
         </div>
-        
+
         <p className="text-sm text-default-500 mb-4">
           Drag to reposition. Resize the box to crop.
         </p>
       </div>
-      
+
       <div className="flex justify-end space-x-2">
-        <Button 
-          onClick={onCancel} 
-          variant="flat" 
+        <Button
           color="default"
           disabled={isLoading}
+          variant="flat"
+          onClick={onCancel}
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleCropComplete} 
+        <Button
           color="primary"
-          isLoading={isLoading}
           disabled={!completedCrop}
+          isLoading={isLoading}
+          onClick={handleCropComplete}
         >
           Apply
         </Button>
@@ -266,4 +282,4 @@ export const ImageCropper = ({
   );
 };
 
-export default ImageCropper; 
+export default ImageCropper;

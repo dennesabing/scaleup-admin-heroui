@@ -1,4 +1,4 @@
-import { UserModel } from '@/lib/auth';
+import { UserModel } from "@/lib/auth";
 
 export interface TeamModel {
   id: number;
@@ -18,4 +18,4 @@ export interface TeamMemberModel {
   user?: UserModel;
   created_at: string;
   updated_at: string;
-} 
+}

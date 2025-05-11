@@ -1,1 +1,1 @@
-export { OrganizationSwitcher } from './OrganizationSwitcher'; 
+export { OrganizationSwitcher } from "./OrganizationSwitcher";

@@ -1,24 +1,31 @@
-import { useState, useCallback } from 'react';
-import { Button } from '@heroui/button';
-import { resendVerificationEmail, formatApiError } from '../lib/auth';
+import { useState, useCallback } from "react";
+import { Button } from "@heroui/button";
+
+import { resendVerificationEmail, formatApiError } from "../lib/auth";
 
 interface ResendVerificationEmailProps {
   className?: string;
   onSuccess?: () => void;
   buttonText?: string;
-  buttonVariant?: 'solid' | 'ghost' | 'light' | 'flat' | 'faded';
-  buttonColor?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
-  buttonSize?: 'sm' | 'md' | 'lg';
+  buttonVariant?: "solid" | "ghost" | "light" | "flat" | "faded";
+  buttonColor?:
+    | "default"
+    | "primary"
+    | "secondary"
+    | "success"
+    | "warning"
+    | "danger";
+  buttonSize?: "sm" | "md" | "lg";
   fullWidth?: boolean;
 }
 
 export default function ResendVerificationEmail({
-  className = '',
+  className = "",
   onSuccess,
-  buttonText = 'Resend verification email',
-  buttonVariant = 'solid',
-  buttonColor = 'primary',
-  buttonSize = 'md',
+  buttonText = "Resend verification email",
+  buttonVariant = "solid",
+  buttonColor = "primary",
+  buttonSize = "md",
   fullWidth = false,
 }: ResendVerificationEmailProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +34,10 @@ export default function ResendVerificationEmail({
 
   const handleResend = useCallback(async () => {
     if (!navigator.onLine) {
-      setError('You appear to be offline. Please check your internet connection and try again.');
+      setError(
+        "You appear to be offline. Please check your internet connection and try again.",
+      );
+
       return;
     }
 
@@ -42,9 +52,13 @@ export default function ResendVerificationEmail({
         onSuccess();
       }
     } catch (err) {
-      console.error('Failed to resend verification email:', err);
-      const errorMessage = err instanceof Error ? err.message : formatApiError(err);
-      setError(errorMessage || 'Failed to send verification email. Please try again.');
+      console.error("Failed to resend verification email:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : formatApiError(err);
+
+      setError(
+        errorMessage || "Failed to send verification email. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -52,25 +66,25 @@ export default function ResendVerificationEmail({
 
   return (
     <div className={className}>
-      {error && (
-        <p className="mb-2 text-sm text-danger">{error}</p>
-      )}
-      
+      {error && <p className="mb-2 text-sm text-danger">{error}</p>}
+
       {success && (
-        <p className="mb-2 text-sm text-success">Verification email sent! Please check your inbox.</p>
+        <p className="mb-2 text-sm text-success">
+          Verification email sent! Please check your inbox.
+        </p>
       )}
-      
+
       <Button
+        className={fullWidth ? "w-full" : ""}
         color={buttonColor}
-        variant={buttonVariant}
-        size={buttonSize}
-        isLoading={isLoading}
         disabled={isLoading}
+        isLoading={isLoading}
+        size={buttonSize}
+        variant={buttonVariant}
         onClick={handleResend}
-        className={fullWidth ? 'w-full' : ''}
       >
         {buttonText}
       </Button>
     </div>
   );
-} 
+}

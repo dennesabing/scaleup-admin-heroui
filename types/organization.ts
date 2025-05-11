@@ -1,4 +1,4 @@
-import { UserModel } from '@/lib/auth';
+import { UserModel } from "@/lib/auth";
 
 export interface OrganizationModel {
   id: number;
@@ -26,9 +26,9 @@ export interface OrganizationInvitationModel {
   email: string;
   token: string;
   role: string;
-  status: 'pending' | 'accepted' | 'expired';
+  status: "pending" | "accepted" | "expired";
   expires_at: string;
   created_at: string;
   updated_at: string;
   organization: OrganizationModel;
-} 
+}

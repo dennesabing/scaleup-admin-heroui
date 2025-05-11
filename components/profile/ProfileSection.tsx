@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
+
 import { Select } from "../../components/ui/Select";
-import { UserModel, UserProfile } from "@/lib/auth";
 import { updateUserProfile } from "../../lib/userService";
-import { 
-  countries, 
-  usStates, 
-  timezones, 
-  genders, 
-  CountryOption, 
-  StateOption, 
-  TimezoneOption,
-  GenderOption
-} from "@/lib/constants";
+
 import AvatarUpload from "./AvatarUpload";
+
+import { UserModel, UserProfile } from "@/lib/auth";
+import {
+  countries,
+  usStates,
+  timezones,
+  genders,
+  CountryOption,
+  StateOption,
+  TimezoneOption,
+  GenderOption,
+} from "@/lib/constants";
 
 interface ProfileSectionProps {
   user: UserModel;
@@ -40,9 +43,9 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
       country: "",
       timezone: "",
       phone: "",
-    }
+    },
   });
-  
+
   // Initial form state (for comparison)
   const [initialForm, setInitialForm] = useState<{
     name: string;
@@ -61,9 +64,9 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
       country: "",
       timezone: "",
       phone: "",
-    }
+    },
   });
-  
+
   // Loading and success states
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -85,52 +88,54 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
           country: user.profile?.country || "",
           timezone: user.profile?.timezone || "",
           phone: user.profile?.phone || "",
-        }
+        },
       };
-      
+
       setProfileForm(formData);
       setInitialForm(formData);
     }
   }, [user]);
-  
+
   // Check if form has changes
   const hasChanges = useMemo(() => {
     // Compare name field
     if (profileForm.name !== initialForm.name) return true;
-    
+
     // Compare profile fields
     const currentProfile = profileForm.profile;
     const initialProfile = initialForm.profile;
-    
-    return Object.keys(currentProfile).some(key => {
-      return currentProfile[key as keyof UserProfile] !== 
-        initialProfile[key as keyof UserProfile];
+
+    return Object.keys(currentProfile).some((key) => {
+      return (
+        currentProfile[key as keyof UserProfile] !==
+        initialProfile[key as keyof UserProfile]
+      );
     });
   }, [profileForm, initialForm]);
-  
+
   // Check if country is US
   const isUS = profileForm.profile.country === "US";
-  
+
   // Handle form changes for text inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === "name") {
       setProfileForm((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     } else {
       setProfileForm((prev) => ({
         ...prev,
         profile: {
           ...prev.profile,
-          [name]: value
-        }
+          [name]: value,
+        },
       }));
     }
   };
-  
+
   // Handle select changes for dropdowns
   const handleSelectChange = (name: string, value: string): void => {
     setProfileForm((prev) => ({
@@ -139,28 +144,28 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
         ...prev.profile,
         [name]: value,
         // Reset state when country changes to non-US
-        ...(name === "country" && value !== "US" ? { state: "" } : {})
-      }
+        ...(name === "country" && value !== "US" ? { state: "" } : {}),
+      },
     }));
   };
-  
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!hasChanges) return;
-    
+
     setSuccess("");
     setIsLoading(true);
-    
+
     try {
-      console.log('Submitting profile data:', profileForm);
+      console.log("Submitting profile data:", profileForm);
       await updateUserProfile(profileForm);
       setSuccess("Profile updated successfully");
       // Update initial form state to current state
       setInitialForm({ ...profileForm });
     } catch (err) {
-      console.error('Error updating profile:', err);
+      console.error("Error updating profile:", err);
       onError(err);
     } finally {
       setIsLoading(false);
@@ -174,10 +179,10 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
       ...prev,
       profile: {
         ...prev.profile,
-        avatar_url: newAvatarUrl
-      }
+        avatar_url: newAvatarUrl,
+      },
     }));
-    
+
     // Show success message for the profile section
     setSuccess("Avatar updated successfully");
   };
@@ -188,18 +193,18 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
       <p className="text-default-500 mb-4">
         Update your account profile information.
       </p>
-      
+
       {/* Avatar Upload */}
       <div className="mb-8">
         <h3 className="text-md font-medium mb-4">Profile Photo</h3>
         <AvatarUpload
           avatarUrl={user.profile?.avatar_url}
-          onSuccess={handleAvatarSuccess}
-          onError={onError}
           className="mb-2"
+          onError={onError}
+          onSuccess={handleAvatarSuccess}
         />
       </div>
-      
+
       <form onSubmit={handleSubmit}>
         <div className="space-y-8">
           {/* Personal Information Section */}
@@ -207,77 +212,88 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
             <h3 className="text-md font-medium mb-4">Personal Information</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium">
+                <label className="block text-sm font-medium" htmlFor="name">
                   Display Name
                 </label>
                 <Input
+                  required
+                  className="mt-1 w-full"
                   id="name"
                   name="name"
+                  placeholder="Your display name"
                   type="text"
                   value={profileForm.name}
                   onChange={handleChange}
-                  required
-                  placeholder="Your display name"
-                  className="mt-1 w-full"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="first_name" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="first_name"
+                  >
                     First Name
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="first_name"
                     name="first_name"
+                    placeholder="Your first name"
                     type="text"
                     value={profileForm.profile.first_name}
                     onChange={handleChange}
-                    placeholder="Your first name"
-                    className="mt-1 w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="last_name" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="last_name"
+                  >
                     Last Name
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="last_name"
                     name="last_name"
+                    placeholder="Your last name"
                     type="text"
                     value={profileForm.profile.last_name}
                     onChange={handleChange}
-                    placeholder="Your last name"
-                    className="mt-1 w-full"
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="birthdate" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="birthdate"
+                  >
                     Birthdate
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="birthdate"
                     name="birthdate"
                     type="date"
                     value={profileForm.profile.birthdate}
                     onChange={handleChange}
-                    className="mt-1 w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="gender" className="block text-sm font-medium">
+                  <label className="block text-sm font-medium" htmlFor="gender">
                     Gender
                   </label>
                   <Select
+                    className="mt-1 w-full"
                     id="gender"
                     value={profileForm.profile.gender}
-                    onChange={(value: string) => handleSelectChange("gender", value)}
-                    className="mt-1 w-full"
+                    onChange={(value: string) =>
+                      handleSelectChange("gender", value)
+                    }
                   >
                     <option value="">Select gender</option>
                     {genders.map((option: GenderOption) => (
@@ -290,52 +306,54 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
               </div>
             </div>
           </div>
-          
+
           {/* Address Section */}
           <div className="border-b pb-5">
             <h3 className="text-md font-medium mb-4">Address</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="address" className="block text-sm font-medium">
+                <label className="block text-sm font-medium" htmlFor="address">
                   Street Address
                 </label>
                 <Input
+                  className="mt-1 w-full"
                   id="address"
                   name="address"
+                  placeholder="Your street address"
                   type="text"
                   value={profileForm.profile.address}
                   onChange={handleChange}
-                  placeholder="Your street address"
-                  className="mt-1 w-full"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="city" className="block text-sm font-medium">
+                  <label className="block text-sm font-medium" htmlFor="city">
                     City
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="city"
                     name="city"
+                    placeholder="Your city"
                     type="text"
                     value={profileForm.profile.city}
                     onChange={handleChange}
-                    placeholder="Your city"
-                    className="mt-1 w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="state" className="block text-sm font-medium">
+                  <label className="block text-sm font-medium" htmlFor="state">
                     State/Province
                   </label>
                   {isUS ? (
                     <Select
+                      className="mt-1 w-full"
                       id="state"
                       value={profileForm.profile.state}
-                      onChange={(value: string) => handleSelectChange("state", value)}
-                      className="mt-1 w-full"
+                      onChange={(value: string) =>
+                        handleSelectChange("state", value)
+                      }
                     >
                       <option value="">Select state</option>
                       {usStates.map((option: StateOption) => (
@@ -346,43 +364,51 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
                     </Select>
                   ) : (
                     <Input
+                      className="mt-1 w-full"
                       id="state"
                       name="state"
+                      placeholder="Your state or province"
                       type="text"
                       value={profileForm.profile.state}
                       onChange={handleChange}
-                      placeholder="Your state or province"
-                      className="mt-1 w-full"
                     />
                   )}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="postal_code" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="postal_code"
+                  >
                     Postal Code
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="postal_code"
                     name="postal_code"
+                    placeholder="Your postal code"
                     type="text"
                     value={profileForm.profile.postal_code}
                     onChange={handleChange}
-                    placeholder="Your postal code"
-                    className="mt-1 w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="country" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="country"
+                  >
                     Country
                   </label>
                   <Select
+                    className="mt-1 w-full"
                     id="country"
                     value={profileForm.profile.country}
-                    onChange={(value: string) => handleSelectChange("country", value)}
-                    className="mt-1 w-full"
+                    onChange={(value: string) =>
+                      handleSelectChange("country", value)
+                    }
                   >
                     <option value="">Select country</option>
                     {countries.map((option: CountryOption) => (
@@ -395,36 +421,41 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
               </div>
             </div>
           </div>
-          
+
           {/* Contact Section */}
           <div>
             <h3 className="text-md font-medium mb-4">Contact Information</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium">
+                  <label className="block text-sm font-medium" htmlFor="phone">
                     Phone Number
                   </label>
                   <Input
+                    className="mt-1 w-full"
                     id="phone"
                     name="phone"
+                    placeholder="Your phone number"
                     type="tel"
                     value={profileForm.profile.phone}
                     onChange={handleChange}
-                    placeholder="Your phone number"
-                    className="mt-1 w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="timezone" className="block text-sm font-medium">
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor="timezone"
+                  >
                     Timezone
                   </label>
                   <Select
+                    className="mt-1 w-full"
                     id="timezone"
                     value={profileForm.profile.timezone}
-                    onChange={(value: string) => handleSelectChange("timezone", value)}
-                    className="mt-1 w-full"
+                    onChange={(value: string) =>
+                      handleSelectChange("timezone", value)
+                    }
                   >
                     <option value="">Select timezone</option>
                     {timezones.map((option: TimezoneOption) => (
@@ -437,13 +468,21 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
               </div>
             </div>
           </div>
-          
+
           {success && (
             <div className="rounded-md bg-success-50 p-3">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-success" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 text-success"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      clipRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      fillRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3">
@@ -452,14 +491,14 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-end">
             <Button
-              type="submit"
-              color={hasChanges ? "success" : "default"}
-              isLoading={isLoading}
-              disabled={isLoading || !hasChanges}
               className="ml-3"
+              color={hasChanges ? "success" : "default"}
+              disabled={isLoading || !hasChanges}
+              isLoading={isLoading}
+              type="submit"
             >
               {hasChanges ? "Save Changes" : "Save"}
             </Button>
@@ -468,4 +507,4 @@ export function ProfileSection({ user, onError }: ProfileSectionProps) {
       </form>
     </div>
   );
-} 
+}

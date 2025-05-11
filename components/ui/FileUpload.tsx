@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@heroui/button";
+
 import { getAvatarUrl } from "@/utils/avatar";
 
 interface FileUploadProps {
@@ -31,11 +32,16 @@ export const FileUpload = ({
   React.useEffect(() => {
     if (typeof value === "string") {
       // Use our avatar URL formatter if this is an image file
-      const formattedUrl = accept.includes('image/') ? getAvatarUrl(value) : value;
+      const formattedUrl = accept.includes("image/")
+        ? getAvatarUrl(value)
+        : value;
+
       setPreview(formattedUrl);
     } else if (value instanceof File) {
       const objectUrl = URL.createObjectURL(value);
+
       setPreview(objectUrl);
+
       return () => URL.revokeObjectURL(objectUrl);
     } else {
       setPreview(null);
@@ -46,17 +52,21 @@ export const FileUpload = ({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setError("");
       const file = e.target.files?.[0];
-      
+
       if (!file) {
         onChange(null);
         setPreview(null);
+
         return;
       }
 
       // Validate file size
       if (file.size > maxSize) {
-        setError(`File too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB`);
+        setError(
+          `File too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB`,
+        );
         e.target.value = "";
+
         return;
       }
 
@@ -64,18 +74,20 @@ export const FileUpload = ({
       const acceptedTypes = accept.split(",").map((type) => type.trim());
       const isValidType = acceptedTypes.some((type) => {
         if (type === "image/*") return file.type.startsWith("image/");
+
         return file.type === type;
       });
 
       if (!isValidType) {
         setError(`Invalid file type. Accepted types: ${accept}`);
         e.target.value = "";
+
         return;
       }
 
       onChange(file);
     },
-    [accept, maxSize, onChange]
+    [accept, maxSize, onChange],
   );
 
   const handleButtonClick = () => {
@@ -99,62 +111,62 @@ export const FileUpload = ({
   return (
     <div className={className}>
       <input
-        type="file"
         ref={fileInputRef}
-        onChange={handleFileChange}
         accept={accept}
         className="hidden"
         disabled={disabled}
+        type="file"
+        onChange={handleFileChange}
       />
 
       {preview ? (
-        <div 
+        <div
+          aria-label="Change file"
           className={`relative ${previewClassName}`}
+          role="button"
+          tabIndex={disabled ? undefined : 0}
           onClick={disabled ? undefined : handleButtonClick}
           onKeyDown={disabled ? undefined : handleKeyDown}
-          tabIndex={disabled ? undefined : 0}
-          role="button"
-          aria-label="Change file"
         >
           {accept.includes("image/") && (
             <img
-              src={preview}
               alt="File preview"
               className="w-full h-full object-cover rounded-md"
+              src={preview}
             />
           )}
-          
+
           {!disabled && (
             <button
+              aria-label="Remove file"
+              className="absolute top-2 right-2 bg-danger rounded-full p-1 text-white hover:bg-danger-600"
               type="button"
               onClick={handleRemove}
-              className="absolute top-2 right-2 bg-danger rounded-full p-1 text-white hover:bg-danger-600"
-              aria-label="Remove file"
             >
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
                 fill="none"
+                height="16"
                 stroke="currentColor"
-                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <path d="M18 6L6 18"></path>
-                <path d="M6 6l12 12"></path>
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
               </svg>
             </button>
           )}
         </div>
       ) : (
         <Button
-          type="button"
-          onClick={handleButtonClick}
-          disabled={disabled}
-          variant="flat"
           className="w-full"
+          disabled={disabled}
+          type="button"
+          variant="flat"
+          onClick={handleButtonClick}
         >
           {buttonText}
         </Button>
@@ -165,4 +177,4 @@ export const FileUpload = ({
   );
 };
 
-export default FileUpload; 
+export default FileUpload;

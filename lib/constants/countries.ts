@@ -55,10 +55,12 @@ export const countries: CountryOption[] = [
 
 // Helper function to find country by ISO2 code
 export const getCountryByCode = (code: string): CountryOption | undefined => {
-  return countries.find(country => country.value === code);
+  return countries.find((country) => country.value === code);
 };
 
 // Helper function to find country by name
 export const getCountryByName = (name: string): CountryOption | undefined => {
-  return countries.find(country => country.label.toLowerCase() === name.toLowerCase());
-}; 
+  return countries.find(
+    (country) => country.label.toLowerCase() === name.toLowerCase(),
+  );
+};

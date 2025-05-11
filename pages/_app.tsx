@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import type { NextPage } from "next";
 import type { ReactElement, ReactNode } from "react";
+
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
@@ -30,7 +31,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       console.error("Global error caught:", event.error);
-      
+
       // Only prevent default for auth-related errors
       if (
         event.error?.message?.includes("Invalid email or password") ||
@@ -41,7 +42,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
     };
 
     window.addEventListener("error", handleError);
-    
+
     return () => {
       window.removeEventListener("error", handleError);
     };
@@ -51,28 +52,26 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   const needsOrganizationContext = () => {
     // Only include organization context for paths that explicitly need it
     return (
-      router.pathname.startsWith('/organizations') || 
-      router.pathname.startsWith('/teams') || 
-      router.pathname.startsWith('/dashboard') ||
-      router.pathname === '/' // Home page may need org context
+      router.pathname.startsWith("/organizations") ||
+      router.pathname.startsWith("/teams") ||
+      router.pathname.startsWith("/dashboard") ||
+      router.pathname === "/" // Home page may need org context
     );
   };
 
   // Render the appropriate layout based on the page type
   const renderPage = () => {
     const pageWithLayout = getLayout(<Component {...pageProps} />);
-    
+
     // Only wrap with Organization/Team providers if needed
     if (needsOrganizationContext()) {
       return (
         <OrganizationProvider>
-          <TeamProvider>
-            {pageWithLayout}
-          </TeamProvider>
+          <TeamProvider>{pageWithLayout}</TeamProvider>
         </OrganizationProvider>
       );
     }
-    
+
     // Otherwise return the page without organization context
     return pageWithLayout;
   };
@@ -80,9 +79,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   return (
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider>
-        <ErrorBoundary>
-          {renderPage()}
-        </ErrorBoundary>
+        <ErrorBoundary>{renderPage()}</ErrorBoundary>
       </NextThemesProvider>
     </HeroUIProvider>
   );

@@ -12,9 +12,11 @@ export const genders: GenderOption[] = [
 ];
 
 export const getGenderByValue = (value: string): GenderOption | undefined => {
-  return genders.find(gender => gender.value === value);
+  return genders.find((gender) => gender.value === value);
 };
 
 export const getGenderByLabel = (label: string): GenderOption | undefined => {
-  return genders.find(gender => gender.label.toLowerCase() === label.toLowerCase());
-}; 
+  return genders.find(
+    (gender) => gender.label.toLowerCase() === label.toLowerCase(),
+  );
+};

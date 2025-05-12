@@ -1,3 +1,5 @@
+## [0.7.0] - Organization-Based User
+
 ## [0.6.4] - Avatar Upload Feature
 
 ### Added

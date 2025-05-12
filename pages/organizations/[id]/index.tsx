@@ -116,6 +116,80 @@ interface EnhancedTeamModel extends TeamModel {
   member_count?: number;
 }
 
+// Update the UserTeamsDisplay component to show both organization and team roles
+const UserTeamsDisplay = ({ 
+  organizationId, 
+  userId, 
+  userName,
+  orgRole 
+}: { 
+  organizationId: string | number; 
+  userId: string | number;
+  userName: string;
+  orgRole?: string;
+}) => {
+  const [userTeams, setUserTeams] = useState<TeamModel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserTeams = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const teams = await getUserTeams(organizationId, userId);
+        setUserTeams(teams || []);
+      } catch (err) {
+        console.error("Failed to load user teams:", err);
+        setError("Failed to load teams. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (organizationId && userId) {
+      fetchUserTeams();
+    }
+  }, [organizationId, userId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Spinner size="sm" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-danger-100 text-danger p-3 rounded-lg">
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      {userTeams.length === 0 ? (
+        <p className="text-sm text-default-500 italic">
+          {userName} is not a member of any teams in this organization.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {userTeams.map((team) => (
+            <div key={team.id} className="flex items-center gap-2">
+              <Chip size="sm" color="primary" variant="flat">
+                {team.name}
+              </Chip>
+              <span className="text-xs text-default-500">Team Member</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function OrganizationDetailPage() {
   const [organization, setOrganization] = useState<OrganizationModel | null>(
     null,
@@ -465,34 +539,17 @@ export default function OrganizationDetailPage() {
   const renderMemberView = () => {
     return (
       <div className="space-y-6">
-        <Card className="w-full">
-          <CardHeader className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xl font-bold">{organization?.name}</h3>
-              <p className="text-default-500 text-sm">
-                {organization?.description || "No description provided"}
-              </p>
-            </div>
-          </CardHeader>
-          <Divider />
-          <CardBody>
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-md font-semibold mb-2">
-                  Organization Details
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="text-default-500">Created</div>
-                  <div>
-                    {organization?.created_at
-                      ? formatDate(organization.created_at)
-                      : "N/A"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+        {currentUser && organization && (
+          <div>
+            <h3 className="text-lg font-medium">Your Teams</h3>
+            <UserTeamsDisplay 
+              organizationId={organization.id}
+              userId={currentUser.id}
+              userName="You"
+              orgRole={currentUserMember?.role}
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -1365,9 +1422,20 @@ export default function OrganizationDetailPage() {
       setUpdatingTeamId(teamId);
       
       if (isSelected) {
-        // Add member to team
-        await addTeamMember(teamId, currentMember.user_id, "member");
-        setTeamMemberSuccess(`User added to ${teamName} successfully`);
+        // Add member to team with a specific role based on their organization role
+        let teamRole = "member";
+        
+        // Assign role based on organization role (optional - you can customize this logic)
+        if (currentMember.role === "admin" || currentMember.role === "owner") {
+          teamRole = "admin"; // Organization admins and owners get team admin role
+        } else if (currentMember.role === "member") {
+          teamRole = "member"; // Organization members get team member role
+        } else {
+          teamRole = "guest"; // Organization guests get team guest role
+        }
+        
+        await addTeamMember(teamId, currentMember.user_id, teamRole);
+        setTeamMemberSuccess(`User added to ${teamName} as ${teamRole} successfully`);
         
         // Update the member count for this team
         setTeamMemberCounts(prev => ({
@@ -1500,7 +1568,7 @@ export default function OrganizationDetailPage() {
             <h1 className="text-2xl font-bold text-default-900">
               {organization?.name}
             </h1>
-            <p className="text-default-600">Organization Details</p>
+            <p className="text-default-600">{organization?.description}</p>
           </div>
           <Button
             color="primary"
@@ -1937,6 +2005,10 @@ export default function OrganizationDetailPage() {
               <div className="space-y-4">
                 <div className="bg-default-50 p-4 rounded-lg">
                   <p className="text-sm mb-2">
+                    <span className="font-medium">Name:</span>{" "}
+                    {currentMember.user?.name || "Unknown User"}
+                  </p>
+                  <p className="text-sm mb-2">
                     <span className="font-medium">Email:</span>{" "}
                     {currentMember.user?.email || "Unknown User"}
                   </p>
@@ -1950,6 +2022,16 @@ export default function OrganizationDetailPage() {
                     <span className="font-medium">Member Since:</span>{" "}
                     {formatDateWithTooltip(currentMember.created_at)}
                   </p>
+                  
+                  {/* Add the user's teams display component here */}
+                  {organization && (
+                    <UserTeamsDisplay 
+                      organizationId={organization.id}
+                      userId={currentMember.user_id}
+                      userName={currentMember.user?.name || "This user"}
+                      orgRole={currentMember.role}
+                    />
+                  )}
                 </div>
 
                 {currentMember.role !== "owner" && (

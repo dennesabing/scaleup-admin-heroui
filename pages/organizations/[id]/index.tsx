@@ -57,6 +57,9 @@ import {
   getOrganizationTeams,
   updateTeam,
   deleteTeam,
+  addTeamMember,
+  removeTeamMember,
+  getUserTeams,
 } from "@/lib/services/teamService";
 import { Role } from "@/utils/permissions";
 import AdminLayout from "@/layouts/admin";
@@ -106,6 +109,11 @@ const User = ({
 interface OrganizationInvitationResponse {
   data?: OrganizationInvitationModel[];
   pending_invitations?: OrganizationInvitationModel[];
+}
+
+// Update TeamModel to include member count
+interface EnhancedTeamModel extends TeamModel {
+  member_count?: number;
 }
 
 export default function OrganizationDetailPage() {
@@ -207,6 +215,7 @@ export default function OrganizationDetailPage() {
 
   // Teams state
   const [teams, setTeams] = useState<TeamModel[]>([]);
+  const [teamMemberCounts, setTeamMemberCounts] = useState<Record<number, number>>({});
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const isLoadingTeamsRef = useRef(false);
   const teamsLoadedRef = useRef(false);
@@ -227,6 +236,20 @@ export default function OrganizationDetailPage() {
 
   // Current user email state to identify the user's own records
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  // Add state for member teams
+  const [memberTeams, setMemberTeams] = useState<TeamModel[]>([]);
+  const [isLoadingMemberTeams, setIsLoadingMemberTeams] = useState(false);
+  const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
+  const [teamMemberError, setTeamMemberError] = useState<string | null>(null);
+  const [teamMemberSuccess, setTeamMemberSuccess] = useState<string | null>(null);
+  const [isUpdatingTeamMembership, setIsUpdatingTeamMembership] = useState(false);
+
+  // Add a new state for team membership modal
+  const [teamMembershipModalOpen, setTeamMembershipModalOpen] = useState(false);
+
+  // Add a state to track which team checkbox is being updated
+  const [updatingTeamId, setUpdatingTeamId] = useState<number | null>(null);
 
   // Effect to set edit team values when current team changes
   useEffect(() => {
@@ -384,8 +407,17 @@ export default function OrganizationDetailPage() {
       setIsLoadingTeams(true);
 
       const teamsData = await getOrganizationTeams(organizationId);
+      
+      // Extract member counts from response (assuming API includes this information)
+      const memberCounts: Record<number, number> = {};
+      teamsData.forEach(team => {
+        // Use type assertion to access the member_count property that may come from the API
+        const count = (team as any).member_count || 0;
+        memberCounts[team.id] = count;
+      });
 
       setTeams(teamsData || []);
+      setTeamMemberCounts(memberCounts);
       teamsLoadedRef.current = true;
     } catch (err) {
       console.error("Failed to load organization teams:", err);
@@ -646,25 +678,37 @@ export default function OrganizationDetailPage() {
                                 {formatDateWithTooltip(member.created_at)}
                               </TableCell>
                               <TableCell>
-                                <div className="flex justify-end">
+                                <div className="flex justify-end gap-2">
                                   {/* Only show member management buttons for owners, admins and Organization Heads */}
                                   {member.role !== "owner" &&
                                     !member.is_current_user &&
                                     canCreateOrganization() && (
-                                      <Button
-                                        isIconOnly
-                                        color="default"
-                                        size="sm"
-                                        title="Change role"
-                                        variant="flat"
-                                        onPress={() => {
-                                          setCurrentMember(member);
-                                          setSelectedRole(member.role as Role);
-                                          setMemberModalOpen(true);
-                                        }}
-                                      >
-                                        <Settings size={16} />
-                                      </Button>
+                                      <>
+                                        <Tooltip content="Manage member role">
+                                          <Button
+                                            isIconOnly
+                                            color="default"
+                                            size="sm"
+                                            title="Change role"
+                                            variant="flat"
+                                            onPress={() => openMemberRoleModal(member)}
+                                          >
+                                            <Settings size={16} />
+                                          </Button>
+                                        </Tooltip>
+                                        <Tooltip content="Manage team membership">
+                                          <Button
+                                            isIconOnly
+                                            color="primary"
+                                            size="sm"
+                                            title="Manage team membership"
+                                            variant="flat"
+                                            onPress={() => openTeamMembershipModal(member)}
+                                          >
+                                            <Users size={16} />
+                                          </Button>
+                                        </Tooltip>
+                                      </>
                                     )}
                                   {/* Show tooltip explaining why action is disabled */}
                                   {member.role === "owner" && (
@@ -975,7 +1019,7 @@ export default function OrganizationDetailPage() {
                     <div className="flex items-center">
                       <Users className="text-default-400 mr-1" size={16} />
                       <span className="text-xs text-default-500">
-                        0 Members
+                        {teamMemberCounts[team.id] || 0} Members
                       </span>
                     </div>
                     <span className="text-xs text-default-400">
@@ -1288,6 +1332,123 @@ export default function OrganizationDetailPage() {
     } finally {
       setIsInviting(false);
     }
+  };
+
+  // Add a function to load a member's teams
+  const loadMemberTeams = async (organizationId: string | number, userId: number | string) => {
+    try {
+      setIsLoadingMemberTeams(true);
+      
+      const memberTeamsData = await getUserTeams(organizationId, userId);
+      setMemberTeams(memberTeamsData || []);
+      
+      // Set selected teams based on the teams the member belongs to
+      setSelectedTeams(memberTeamsData.map(team => team.id));
+    } catch (err) {
+      console.error("Failed to load member teams:", err);
+    } finally {
+      setIsLoadingMemberTeams(false);
+    }
+  };
+
+  // Update the toggleTeamMembership function to handle specific checkbox state
+  const toggleTeamMembership = async (teamId: number, isSelected: boolean) => {
+    if (!currentMember) return;
+    
+    // Find the team name for better error/success messages
+    const team = teams.find(t => t.id === teamId);
+    const teamName = team?.name || `Team #${teamId}`;
+    
+    try {
+      setTeamMemberError(null);
+      // Set which team is currently being updated
+      setUpdatingTeamId(teamId);
+      
+      if (isSelected) {
+        // Add member to team
+        await addTeamMember(teamId, currentMember.user_id, "member");
+        setTeamMemberSuccess(`User added to ${teamName} successfully`);
+        
+        // Update the member count for this team
+        setTeamMemberCounts(prev => ({
+          ...prev,
+          [teamId]: (prev[teamId] || 0) + 1
+        }));
+      } else {
+        // Remove member from team
+        await removeTeamMember(teamId, currentMember.user_id);
+        setTeamMemberSuccess(`User removed from ${teamName} successfully`);
+        
+        // Update the member count for this team
+        setTeamMemberCounts(prev => ({
+          ...prev,
+          [teamId]: Math.max((prev[teamId] || 0) - 1, 0)
+        }));
+      }
+      
+      // Update selected teams state
+      setSelectedTeams(prev => 
+        isSelected 
+          ? [...prev, teamId] 
+          : prev.filter(id => id !== teamId)
+      );
+      
+      // We don't reload the teams list anymore to improve performance
+      // Instead, we rely on our local state updates
+      
+    } catch (err) {
+      console.error("Failed to update team membership:", err);
+      setTeamMemberError(`Failed to update membership for ${teamName}. Please try again.`);
+    } finally {
+      // Clear the updating team id
+      setUpdatingTeamId(null);
+      
+      // Clear success message after a delay
+      if (teamMemberSuccess) {
+        setTimeout(() => {
+          setTeamMemberSuccess(null);
+        }, 3000);
+      }
+    }
+  };
+
+  // Effect to load member teams when the current member changes or team modal opens
+  useEffect(() => {
+    if (currentMember && id && typeof id === "string" && teamMembershipModalOpen) {
+      loadMemberTeams(id, currentMember.user_id);
+    }
+  }, [currentMember, id, teamMembershipModalOpen]);
+
+  // Effect to load teams if not already loaded when a modal with teams is active
+  useEffect(() => {
+    if ((memberModalOpen || teamMembershipModalOpen) && 
+        id && typeof id === "string" && 
+        (!teams || teams.length === 0)) {
+      loadTeams(id);
+    }
+  }, [memberModalOpen, teamMembershipModalOpen, id, teams]);
+
+  // Update to have separate functions for opening role and team modals
+  const openMemberRoleModal = (member: OrganizationMemberModel) => {
+    setCurrentMember(member);
+    setSelectedRole(member.role as Role);
+    setMemberModalOpen(true);
+    
+    // Clear any previous errors or success messages
+    setMemberActionError(null);
+  };
+  
+  const openTeamMembershipModal = (member: OrganizationMemberModel) => {
+    setCurrentMember(member);
+    setTeamMembershipModalOpen(true);
+    
+    // Reset all states related to team membership
+    setTeamMemberError(null);
+    setTeamMemberSuccess(null);
+    setUpdatingTeamId(null);
+    setSelectedTeams([]);
+    
+    // We'll let the useEffect load the member's teams
   };
 
   // If the page is loading, show a spinner
@@ -1759,7 +1920,7 @@ export default function OrganizationDetailPage() {
         </ModalContent>
       </Modal>
 
-      {/* Member Management Modal */}
+      {/* Member Role Management Modal */}
       <Modal isOpen={memberModalOpen} onOpenChange={setMemberModalOpen}>
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
@@ -1887,6 +2048,93 @@ export default function OrganizationDetailPage() {
                 </Button>
               </div>
             </div>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Team Membership Management Modal */}
+      <Modal isOpen={teamMembershipModalOpen} onOpenChange={setTeamMembershipModalOpen}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {currentMember ? "Manage Team Membership" : "Loading..."}
+          </ModalHeader>
+          <ModalBody>
+            {teamMemberError && (
+              <div className="bg-danger-100 text-danger p-3 rounded-lg mb-4">
+                {teamMemberError}
+              </div>
+            )}
+
+            {teamMemberSuccess && (
+              <div className="bg-success-100 text-success p-3 rounded-lg mb-4">
+                {teamMemberSuccess}
+              </div>
+            )}
+
+            {currentMember && (
+              <div className="space-y-4">
+                <div className="bg-default-50 p-4 rounded-lg">
+                  <p className="text-sm mb-2">
+                    <span className="font-medium">Member:</span>{" "}
+                    {currentMember.user?.name || "Unknown User"}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Email:</span>{" "}
+                    {currentMember.user?.email || "Unknown User"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-3">Team Membership</p>
+                  
+                  {isLoadingTeams || isLoadingMemberTeams ? (
+                    <div className="flex justify-center py-4">
+                      <Spinner size="sm" />
+                    </div>
+                  ) : teams.length === 0 ? (
+                    <p className="text-sm text-default-500">No teams available in this organization</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {teams.map((team) => (
+                        <div key={team.id} className="flex items-center justify-between p-2 bg-default-50 rounded-md">
+                          <div>
+                            <p className="text-sm font-medium">{team.name}</p>
+                            {team.description && (
+                              <p className="text-xs text-default-500">{team.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center">
+                            {updatingTeamId === team.id ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-primary rounded border-default-300"
+                                checked={selectedTeams.includes(team.id)}
+                                onChange={(e) => toggleTeamMembership(team.id, e.target.checked)}
+                                disabled={updatingTeamId !== null} // Only disable all checkboxes if any update is in progress
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-default-50 p-3 rounded-lg text-sm text-default-600">
+                  <p>Check the boxes to add the member to teams, or uncheck to remove them.</p>
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="flat"
+              onPress={() => setTeamMembershipModalOpen(false)}
+            >
+              Close
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

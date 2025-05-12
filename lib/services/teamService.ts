@@ -12,6 +12,8 @@ const API_ENDPOINTS = {
   TEAM_MEMBERS: (teamId: number | string) => `/teams/${teamId}/members`,
   TEAM_MEMBER: (teamId: number | string, userId: number | string) =>
     `/teams/${teamId}/members/${userId}`,
+  USER_TEAMS: (organizationId: number | string, userId: number | string) =>
+    `/organizations/${organizationId}/users/${userId}/teams`,
 };
 
 /**
@@ -135,4 +137,18 @@ export const removeTeamMember = async (
   userId: number | string,
 ): Promise<void> => {
   await axiosInstance.delete(API_ENDPOINTS.TEAM_MEMBER(teamId, userId));
+};
+
+/**
+ * Get all teams a user belongs to in an organization
+ */
+export const getUserTeams = async (
+  organizationId: number | string,
+  userId: number | string,
+): Promise<TeamModel[]> => {
+  const response = await axiosInstance.get(
+    API_ENDPOINTS.USER_TEAMS(organizationId, userId),
+  );
+
+  return response.data.data;
 };

@@ -42,6 +42,11 @@ const sidebarItems: SidebarItem[] = [
     icon: "BuildingIcon",
   },
   {
+    title: "Teams",
+    href: "/teams",
+    icon: "Users",
+  },
+  {
     title: "Users",
     href: "/users",
     icon: "Users",

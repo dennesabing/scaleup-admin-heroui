@@ -1048,8 +1048,7 @@ export default function OrganizationDetailPage() {
                 isPressable
                 className="bg-default-50 p-4 rounded-lg border border-default-200 hover:border-primary transition-all cursor-pointer"
                 onPress={() => {
-                  setCurrentTeam(team);
-                  setTeamDetailModalOpen(true);
+                  router.push(`/teams/${team.id}`);
                 }}
               >
                 <CardBody className="p-0">
@@ -1059,7 +1058,8 @@ export default function OrganizationDetailPage() {
                       isIconOnly
                       size="sm"
                       variant="light"
-                      onPress={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setCurrentTeam(team);
                         setTeamDetailModalOpen(true);
                       }}

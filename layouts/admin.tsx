@@ -41,11 +41,11 @@ const sidebarItems: SidebarItem[] = [
     href: "/organizations",
     icon: "BuildingIcon",
   },
-  {
-    title: "Teams",
-    href: "/teams",
-    icon: "Users",
-  },
+  // {
+  //   title: "Teams",
+  //   href: "/teams",
+  //   icon: "Users",
+  // },
   {
     title: "Users",
     href: "/users",

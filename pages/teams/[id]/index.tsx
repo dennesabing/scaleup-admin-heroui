@@ -30,7 +30,7 @@ import {
 } from "@heroui/table";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Tooltip } from "@heroui/tooltip";
-import { Spinner } from "@heroui/spinner";
+import { dispayRoleName, dispayRoleNameColor } from "@/lib/services/userService";
 import { 
   Edit,
   MoreVertical, 
@@ -576,31 +576,21 @@ const TeamDetailPage: NextPageWithLayout = () => {
                 <TableRow key={member.id}>
                   <TableCell>
                     <UserComponent
-                      name={member.user?.name}
-                      description={member.user?.email}
+                      name={member.user?.name ?? member.name ?? "Unknown"}
+                      description={member.user?.email ?? member.email ?? "Unknown"}
                       avatarProps={{
-                        src: member.user?.profile?.avatar_url || undefined,
+                        src: member.user?.profile?.avatar_url ?? member.profile_picture_url ?? undefined,
                         fallback: member.user?.name?.charAt(0) || "U",
                       }}
                     />
                   </TableCell>
                   <TableCell>
                     <Chip 
-                      color={
-                        member.role === "leader" 
-                          ? "primary" 
-                          : member.role === "admin" 
-                            ? "secondary" 
-                            : "default"
-                      }
+                      color={dispayRoleNameColor(member.role) as any}
                       variant="flat"
                       size="sm"
                     >
-                      {member.role === "leader" 
-                        ? "Team Leader" 
-                        : member.role === "admin" 
-                          ? "Team Admin" 
-                          : "Team Member"}
+                      {dispayRoleName(member.role)}
                     </Chip>
                   </TableCell>
                   <TableCell>
@@ -609,7 +599,7 @@ const TeamDetailPage: NextPageWithLayout = () => {
                   <TableCell>
                     {canModifyTeam() ? (
                       <Dropdown>
-                        <DropdownTrigger>
+                        <DropdownTrigger> 
                           <Button 
                             isIconOnly 
                             variant="light" 

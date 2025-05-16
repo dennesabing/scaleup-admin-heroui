@@ -18,4 +18,7 @@ export interface TeamMemberModel {
   user?: UserModel;
   created_at: string;
   updated_at: string;
+  name?: string;
+  email?: string;
+  profile_picture_url?: string;
 } 

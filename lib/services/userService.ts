@@ -265,3 +265,27 @@ export const updateUserAvatarV2 = async (file: File): Promise<string> => {
     throw new Error(errorMessage);
   }
 }; 
+
+/**
+ * Get the name of a role
+ * @param role The role to get the name of
+ * @returns The name of the role
+ */
+export const dispayRoleName = (role: string): string => {
+  return role
+}; 
+
+/**
+ * Get the color of a role
+ * @param role The role to get the color of
+ * @returns The color of the role
+ */
+export const dispayRoleNameColor = (role: string): string => {
+  if (role === "Organization Head") {
+    return "primary"
+  } else if (role === "OrganizationAdmin") {
+    return "secondary"
+  } else {
+    return "default"
+  }
+};

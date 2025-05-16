@@ -179,7 +179,7 @@ const TeamDetailPage: NextPageWithLayout = () => {
 
   // Check permissions
   const canModifyTeam = () => {
-    if (!currentUser || !userRole) return false;
+    if (!currentUser) return false;
     
     // Only Organization owner, admin, or Organization Head can modify team settings
     if (canManageTeams(userRole, currentUser?.roles)) {
